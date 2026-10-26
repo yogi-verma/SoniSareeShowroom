@@ -1,7 +1,8 @@
 import { FiBookmark, FiSearch } from "react-icons/fi";
+import Link from "next/link";
 
 const navigation = [
-  { label: "Home", href: "#home" },
+  { label: "Home", href: "/" },
   { label: "Shop", href: "#shop" },
   { label: "Collections", href: "#collections" },
 ];
@@ -12,18 +13,18 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
       aria-label="Main navigation"
       className={
         mobile
-          ? "flex items-center justify-center gap-8 px-5 py-3 text-[11px] md:hidden"
-          : "hidden items-center gap-9 text-[11px] tracking-wide text-white/80 md:flex"
+          ? "flex items-center justify-center gap-9 px-5 py-3 text-[12px] md:hidden"
+          : "hidden items-center gap-10 text-[13px] tracking-wide text-white/95 md:flex"
       }
     >
       {navigation.map((item) => (
-        <a
+        <Link
           key={item.label}
           href={item.href}
-          className="transition-colors hover:text-[#d9b5cf]"
+          className="group relative py-2 font-medium transition-colors hover:text-[#e8c5dc] after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-[#d9b5cf] after:transition-transform after:duration-300 after:content-[''] hover:after:origin-left hover:after:scale-x-100"
         >
           {item.label}
-        </a>
+        </Link>
       ))}
     </nav>
   );
@@ -33,7 +34,7 @@ export default function Header() {
   return (
     <header className="absolute inset-x-0 top-0 z-50 bg-gradient-to-b from-black/40 via-black/15 to-transparent text-white">
       <div className="mx-auto flex max-w-[1440px] items-center justify-between px-[5%] py-3.5 md:py-4">
-        <a href="#home" aria-label="Soni Saree Showroom home" className="group flex items-center gap-2.5">
+        <Link href="/" aria-label="Soni Saree Showroom home" className="group flex items-center gap-2.5">
           <span className="font-serif text-[30px] leading-none text-[#c994bc] transition-colors group-hover:text-[#e4bfd8]">❋</span>
           <span className="font-serif text-[17px] leading-[1.05] tracking-[0.01em] sm:text-[19px]">
             Soni Saree Showroom
@@ -41,7 +42,7 @@ export default function Header() {
               THE ART OF INDIAN ELEGANCE
             </small>
           </span>
-        </a>
+        </Link>
 
         <Navigation />
 
