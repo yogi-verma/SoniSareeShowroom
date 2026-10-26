@@ -1,0 +1,13 @@
+const image = (id: string, width = 1000) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&q=85`;
+
+export default function Trends() {
+  return (
+    <>
+      <section id="story" className="mx-auto grid max-w-6xl grid-cols-1 gap-3 px-[4%] md:grid-cols-[1.42fr_1fr]">
+        <article className="relative flex h-[205px] items-center overflow-hidden text-white md:h-[250px]"><img src={image("photo-1610030469983-98e550d6193c")} alt="Traditional handloom saree collection" className="absolute inset-0 h-full w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#211714]/25 to-[#211714]/80"/><div className="relative ml-auto w-[55%] px-4 md:px-8"><span className="text-[7px] font-bold tracking-[2px] text-[#d9b5cf]">FEATURED COLLECTION</span><h2 className="my-2 font-serif text-2xl leading-tight">Traditional<br/>Handloom Sarees</h2><p className="mb-3 text-[9px] text-white/80">Timeless beauty, woven by hand.</p><a href="#shop" className="inline-flex items-center gap-2 rounded bg-[#6d3d69] px-3 py-2 text-[8px]">Explore Collection →</a></div></article>
+        <article className="relative flex h-[180px] items-center overflow-hidden text-white md:h-[250px]"><img src={image("photo-1583391733956-6c78276477e2")} alt="Rich Banarasi silk saree" className="absolute inset-0 h-full w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-r from-[#2c112b]/90 via-[#2c112b]/65 to-transparent"/><div className="relative px-7"><span className="text-[7px] font-bold tracking-[2px] text-[#d9b5cf]">TRENDING NOW</span><h2 className="my-2 font-serif text-2xl">Banarasi Sarees</h2><p className="mb-3 text-[9px] text-white/80">Rich heritage. Modern elegance.</p><a href="#shop" className="inline-flex items-center gap-2 rounded border border-[#f3d9ee] px-3 py-2 text-[8px]">Shop Banarasi →</a></div></article>
+      </section>
+      <section className="relative mx-auto my-8 flex h-36 max-w-6xl items-center gap-6 overflow-hidden bg-[#271027] px-[8%] text-white"><img src={image("photo-1617627143750-d86bc21e42bb", 1400)} alt="" className="absolute inset-0 h-full w-full object-cover object-center"/><div className="absolute inset-0 bg-gradient-to-r from-[#271027]/95 via-[#271027]/65 to-[#271027]/10"/><div className="relative"><span className="text-[8px] font-bold tracking-[2px] text-[#d9b5cf]">EXCLUSIVE OFFER</span><h2 className="mt-2 font-serif text-xl leading-tight md:text-3xl">Get 10% Off<br/>on your first order</h2></div><div className="relative rounded-full border border-[#d9b5cf] px-3 py-2 text-[8px] md:px-5 md:text-[9px]">Use Code: <strong className="ml-1 tracking-wider">WELCOME10</strong></div></section>
+    </>
+  );
+}
