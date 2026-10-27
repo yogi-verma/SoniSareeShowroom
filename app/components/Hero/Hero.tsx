@@ -11,7 +11,8 @@ const slides = [
     eyebrow: "WELCOME TO SONI",
     title: "A world of",
     accent: "beautiful drapes.",
-    description: "Step into our showroom and discover sarees chosen to make your most meaningful moments unforgettable.",
+    description:
+      "Step into our showroom and discover sarees chosen to make your most meaningful moments unforgettable.",
     image: mainPhoto,
     alt: "Inside the Soni Saree Showroom, with sarees on display",
     category: "OUR SHOWROOM",
@@ -20,7 +21,8 @@ const slides = [
     eyebrow: "YOUR SAREE STORY",
     title: "Tradition,",
     accent: "made yours.",
-    description: "Visit Soni Saree Showroom for vibrant colors, graceful drapes and a warm welcome.",
+    description:
+      "Visit Soni Saree Showroom for vibrant colors, graceful drapes and a warm welcome.",
     image: innerPhoto,
     alt: "The Soni Saree Showroom entrance and storefront",
     category: "THE SONI EXPERIENCE",
@@ -29,7 +31,8 @@ const slides = [
     eyebrow: "TIMELESS ELEGANCE",
     title: "Beautiful Sarees",
     accent: "for every story.",
-    description: "Heirloom-worthy weaves, chosen to make your most meaningful moments unforgettable.",
+    description:
+      "Heirloom-worthy weaves, chosen to make your most meaningful moments unforgettable.",
     image: "photo-1610030469983-98e550d6193c",
     alt: "Model in a richly woven purple and gold saree",
     category: "THE SAREE EDIT",
@@ -38,7 +41,8 @@ const slides = [
     eyebrow: "CRAFTED TO BE REMEMBERED",
     title: "A little more",
     accent: "occasion-ready.",
-    description: "Statement suits with the fine details, beautiful colors, and graceful drape you love.",
+    description:
+      "Statement suits with the fine details, beautiful colors, and graceful drape you love.",
     image: "photo-1705921290980-6a644d2828ed",
     alt: "Model wearing a mint green embroidered Indian suit",
     category: "THE SUIT EDIT",
@@ -47,7 +51,8 @@ const slides = [
     eyebrow: "WOVEN WITH HERITAGE",
     title: "Tradition,",
     accent: "made yours.",
-    description: "Discover the artistry of Indian textiles in colors that feel distinctly you.",
+    description:
+      "Discover the artistry of Indian textiles in colors that feel distinctly you.",
     image: "photo-1717835735088-4c821959bdaa",
     alt: "Model wearing a red and gold traditional saree",
     category: "THE SAREE EDIT",
@@ -56,7 +61,8 @@ const slides = [
     eyebrow: "A FRESH TAKE ON FESTIVE",
     title: "Grace in",
     accent: "every detail.",
-    description: "Meet expressive Indian occasion wear made for celebrations big and small.",
+    description:
+      "Meet expressive Indian occasion wear made for celebrations big and small.",
     image: "photo-1742800767764-479556a4d8a5",
     alt: "Model in a red floral Indian suit with a flowing dupatta",
     category: "THE SUIT EDIT",
@@ -65,12 +71,12 @@ const slides = [
     eyebrow: "DRESSED IN COLOR",
     title: "The art of",
     accent: "being you.",
-    description: "From first glance to final drape, find a look that feels like your own.",
+    description:
+      "From first glance to final drape, find a look that feels like your own.",
     image: "photo-1753981031189-27bb7bd1c079",
     alt: "Model wearing an ornate green silk saree",
     category: "THE SAREE EDIT",
   },
-
 ];
 
 const imageUrl = (id: string) =>
@@ -99,12 +105,16 @@ export default function Hero() {
       id="home"
       aria-roledescription="carousel"
       aria-label="Featured sarees and suits"
-      className="relative isolate flex min-h-[650px] items-center overflow-hidden bg-[#211821] text-white md:min-h-[720px]"
+      className="relative isolate flex min-h-[650px] items-center overflow-hidden bg-[#211821] text-white md:min-h-[600px]"
     >
       {slides.map((slide, index) => (
         <Image
           key={`slide-${index}`}
-          src={typeof slide.image === "string" ? imageUrl(slide.image) : slide.image}
+          src={
+            typeof slide.image === "string"
+              ? imageUrl(slide.image)
+              : slide.image
+          }
           alt={index === activeSlide ? slide.alt : ""}
           aria-hidden={index !== activeSlide}
           fill
@@ -123,7 +133,7 @@ export default function Hero() {
       <div className="absolute inset-0 bg-gradient-to-r from-[#1b111b]/85 via-[#1b111b]/50 to-[#1b111b]/10" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#1b111b]/55 via-transparent to-black/30" />
 
-      <div className="relative mx-auto flex w-full max-w-[1440px] flex-col px-[7%] pb-20 pt-36 md:pb-24 md:pt-40">
+      <div className="relative mx-auto flex w-full max-w-[1440px] flex-col px-[7%] pb-20 pt-36 md:pb-20 md:pt-40">
         <div className="max-w-2xl">
           <div className="mb-5 flex items-center gap-3 text-[9px] font-semibold tracking-[0.24em] text-[#e9c9dc] sm:text-[10px]">
             <span className="h-px w-8 bg-[#d9b5cf]" />
@@ -155,63 +165,27 @@ export default function Hero() {
                 size={15}
               />
             </a>
-            <a
-              href="#collections"
-              className="inline-flex min-h-12 items-center px-4 text-[10px] font-semibold tracking-[0.12em] text-white/90 transition hover:text-white"
-            >
-              DISCOVER OUR CRAFT
-            </a>
           </div>
         </div>
 
-        <div className="absolute bottom-7 left-[7%] right-[7%] flex items-end justify-between border-t border-white/30 pt-4 md:bottom-9">
-          <div className="flex items-center gap-4">
-            <span className="font-serif text-2xl tabular-nums text-white">
-              0{activeSlide + 1}
-              <span className="mx-1 text-sm text-white/50">/</span>
-              <span className="text-sm text-white/60">0{slides.length}</span>
-            </span>
-            <span className="hidden h-5 w-px bg-white/35 sm:block" />
-            <span className="hidden text-[9px] font-medium tracking-[0.2em] text-white/75 sm:block">
-              {current.category}
-            </span>
-            <div className="ml-1 flex items-center gap-1.5 sm:ml-2 sm:gap-2">
-              {slides.map((slide, index) => (
-                <button
-                  key={`slide-indicator-${index}`}
-                  type="button"
-                  aria-label={`Show slide ${index + 1}: ${slide.category.toLowerCase()}`}
-                  aria-current={index === activeSlide ? "true" : undefined}
-                  onClick={() => setActiveSlide(index)}
-                  className={`h-1 rounded-full transition-all duration-300 ${
-                    index === activeSlide
-                      ? "w-8 bg-white"
-                      : "w-3 bg-white/45 hover:bg-white/75"
-                  }`}
-                />
-              ))}
-            </div>
+        {/* <div className="absolute bottom-7 left-[7%] right-[7%] flex items-end justify-between md:bottom-9">
+          <div className="ml-1 flex items-center gap-1.5 sm:ml-2 sm:gap-2">
+            {slides.map((slide, index) => (
+              <button
+                key={`slide-indicator-${index}`}
+                type="button"
+                aria-label={`Show slide ${index + 1}: ${slide.category.toLowerCase()}`}
+                aria-current={index === activeSlide ? "true" : undefined}
+                onClick={() => setActiveSlide(index)}
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  index === activeSlide
+                    ? "w-8 bg-white"
+                    : "w-3 bg-white/45 hover:bg-white/75"
+                }`}
+              />
+            ))}
           </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              aria-label="Previous slide"
-              onClick={showPrevious}
-              className="grid h-10 w-10 place-items-center rounded-full border border-white/50 bg-black/10 text-white transition hover:border-white hover:bg-white/15"
-            >
-              <FiArrowLeft aria-hidden="true" size={16} />
-            </button>
-            <button
-              type="button"
-              aria-label="Next slide"
-              onClick={showNext}
-              className="grid h-10 w-10 place-items-center rounded-full border border-white/50 bg-black/10 text-white transition hover:border-white hover:bg-white/15"
-            >
-              <FiArrowRight aria-hidden="true" size={16} />
-            </button>
-          </div>
-        </div>
+        </div> */}
       </div>
     </section>
   );
