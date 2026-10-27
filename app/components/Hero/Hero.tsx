@@ -3,8 +3,28 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
+import mainPhoto from "../../assets/HeroSection/mainphoto.jpeg";
+import innerPhoto from "../../assets/HeroSection/innerphoto.jpeg";
 
 const slides = [
+  {
+    eyebrow: "WELCOME TO SONI",
+    title: "A world of",
+    accent: "beautiful drapes.",
+    description: "Step into our showroom and discover sarees chosen to make your most meaningful moments unforgettable.",
+    image: mainPhoto,
+    alt: "Inside the Soni Saree Showroom, with sarees on display",
+    category: "OUR SHOWROOM",
+  },
+  {
+    eyebrow: "YOUR SAREE STORY",
+    title: "Tradition,",
+    accent: "made yours.",
+    description: "Visit Soni Saree Showroom for vibrant colors, graceful drapes and a warm welcome.",
+    image: innerPhoto,
+    alt: "The Soni Saree Showroom entrance and storefront",
+    category: "THE SONI EXPERIENCE",
+  },
   {
     eyebrow: "TIMELESS ELEGANCE",
     title: "Beautiful Sarees",
@@ -50,6 +70,7 @@ const slides = [
     alt: "Model wearing an ornate green silk saree",
     category: "THE SAREE EDIT",
   },
+
 ];
 
 const imageUrl = (id: string) =>
@@ -82,8 +103,8 @@ export default function Hero() {
     >
       {slides.map((slide, index) => (
         <Image
-          key={slide.image}
-          src={imageUrl(slide.image)}
+          key={`slide-${index}`}
+          src={typeof slide.image === "string" ? imageUrl(slide.image) : slide.image}
           alt={index === activeSlide ? slide.alt : ""}
           aria-hidden={index !== activeSlide}
           fill
@@ -157,7 +178,7 @@ export default function Hero() {
             <div className="ml-1 flex items-center gap-1.5 sm:ml-2 sm:gap-2">
               {slides.map((slide, index) => (
                 <button
-                  key={slide.image}
+                  key={`slide-indicator-${index}`}
                   type="button"
                   aria-label={`Show slide ${index + 1}: ${slide.category.toLowerCase()}`}
                   aria-current={index === activeSlide ? "true" : undefined}
