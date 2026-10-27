@@ -58,27 +58,27 @@ const collections = [
 
 export default function CategoriesPage() {
   return (
-    <main className="min-h-screen bg-paper text-ink">
+    <main className="min-h-screen bg-[#faf7f2] text-[#2d242d]">
       <Header />
 
-      <section className="relative isolate flex min-h-[300px] items-end overflow-hidden bg-[#211821] text-white sm:min-h-[300px]">
+      <section className="relative isolate overflow-hidden bg-[#281b26] text-white">
         <Image
           src={image("photo-1617627143750-d86bc21e42bb", 1800)}
           alt="Traditional Indian saree in rich festive colors"
           fill
           sizes="100vw"
           unoptimized
-          className="-z-20 object-cover object-center"
+          className="-z-20 object-cover object-center opacity-45"
         />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#211821]/85 via-[#211821]/45 to-[#211821]/20" />
-        <div className="mx-auto w-full max-w-6xl px-[6%] pb-10 pt-36 sm:pb-12">
-          <span className="text-[8px] font-semibold tracking-[0.25em] text-[#e3bfd8]">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#211821]/85 via-[#211821]/75 to-[#211821]/35" />
+        <div className="mx-auto max-w-6xl px-[6%] pb-12 pt-32 sm:pb-16 sm:pt-25">
+          <span className="text-[9px] font-semibold tracking-[0.28em] text-[#e3bfd8]">
             FIND YOUR KIND OF BEAUTIFUL
           </span>
           <h1 className="mt-3 font-serif text-4xl leading-tight sm:text-5xl md:text-6xl">
             Shop by category
           </h1>
-          <p className="mt-3 max-w-lg text-[11px] leading-6 text-white/75 sm:text-xs">
+          <p className="mt-3 max-w-xl text-[11px] leading-6 text-white/75 sm:text-sm">
             From treasured sarees to festive suits and Rajputi poshak, explore
             pieces for every celebration and every day.
           </p>
@@ -99,12 +99,12 @@ export default function CategoriesPage() {
         </div>
       </nav>
 
-      <div className="mx-auto max-w-6xl px-[6%] py-10 sm:py-14">
+      <div className="mx-auto mb-5 max-w-6xl px-[6%] pt-5">
         {collections.map((collection, sectionIndex) => (
           <section
             key={collection.id}
             id={collection.id}
-            className={sectionIndex === 0 ? "scroll-mt-8" : "mt-12 scroll-mt-8 sm:mt-16"}
+            className={sectionIndex === 0 ? "scroll-mt-8" : "mt-12 scroll-mt-8 sm:mt-10"}
           >
             <div className="mb-5 flex items-end justify-between gap-4 sm:mb-7">
               <div>
@@ -146,6 +146,13 @@ export default function CategoriesPage() {
                       {String(itemIndex + 1).padStart(2, "0")}
                     </span>
                   </div>
+                  {collection.id === "sarees" && itemIndex === 0 && (
+                    <Link
+                      href="/category/saree/banarshi"
+                      aria-label="Shop Banarshi silk sarees"
+                      className="absolute inset-0 z-10"
+                    />
+                  )}
                 </article>
               ))}
             </div>
