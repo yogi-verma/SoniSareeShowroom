@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -15,6 +14,7 @@ import {
   FiShoppingBag,
   FiTrendingUp,
 } from "react-icons/fi";
+import { logoutAdmin } from "../utils/adminApi";
 
 const sales = [
   { day: "Mon", amount: 42 },
@@ -47,29 +47,18 @@ const metrics = [
   { label: "Pending orders", value: "12", change: "4 need attention", up: false, icon: FiPackage, note: "ready to process" },
 ];
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ adminName }: { adminName: string }) {
   const router = useRouter();
-  const [adminName, setAdminName] = useState("Admin");
-  const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    const token = window.sessionStorage.getItem("adminToken");
-    if (!token) {
+  async function handleLogout() {
+    try {
+      await logoutAdmin();
+    } catch {
+      // The HttpOnly session cookie cannot be cleared by client-side JavaScript.
+    } finally {
       router.replace("/");
-      return;
     }
-
-    setAdminName(window.sessionStorage.getItem("adminName") || "Admin");
-    setIsReady(true);
-  }, [router]);
-
-  function handleLogout() {
-    window.sessionStorage.removeItem("adminToken");
-    window.sessionStorage.removeItem("adminName");
-    router.replace("/");
   }
-
-  if (!isReady) return <main className="min-h-screen bg-[#f7f5f1]" aria-label="Loading admin dashboard" />;
 
   return (
     <main className="min-h-screen bg-[#f7f5f1] text-[#29232b]">
