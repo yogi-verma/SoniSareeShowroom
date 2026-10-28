@@ -7,6 +7,9 @@ const ADMIN_API_URL = process.env.ADMIN_BACKEND_URL
   || process.env.NEXT_PUBLIC_ADMIN_API_URL
   || "http://localhost:5001";
 
+// This page validates an HttpOnly session cookie and backend session at request time.
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Admin Dashboard | Soni Saree Showroom",
 };
