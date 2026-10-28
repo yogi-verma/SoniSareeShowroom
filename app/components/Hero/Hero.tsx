@@ -105,7 +105,7 @@ export default function Hero() {
       id="home"
       aria-roledescription="carousel"
       aria-label="Featured sarees and suits"
-      className="relative isolate flex min-h-[650px] items-center overflow-hidden bg-[#211821] text-white md:min-h-[600px]"
+      className="relative isolate flex min-h-[600px] items-center overflow-hidden bg-[#211821] text-white md:min-h-[550px]"
     >
       {slides.map((slide, index) => (
         <Image
@@ -133,7 +133,7 @@ export default function Hero() {
       <div className="absolute inset-0 bg-gradient-to-r from-[#1b111b]/85 via-[#1b111b]/50 to-[#1b111b]/10" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#1b111b]/55 via-transparent to-black/30" />
 
-      <div className="relative mx-auto flex w-full max-w-[1440px] flex-col px-[7%] pb-20 pt-36 md:pb-20 md:pt-40">
+      <div className="relative mx-auto flex w-full max-w-[1440px] flex-col px-[7%] pt-36 md:pt-40">
         <div className="max-w-2xl">
           <div className="mb-5 flex items-center gap-3 text-[9px] font-semibold tracking-[0.24em] text-[#e9c9dc] sm:text-[10px]">
             <span className="h-px w-8 bg-[#d9b5cf]" />
@@ -167,25 +167,6 @@ export default function Hero() {
             </a>
           </div>
         </div>
-
-        {/* <div className="absolute bottom-7 left-[7%] right-[7%] flex items-end justify-between md:bottom-9">
-          <div className="ml-1 flex items-center gap-1.5 sm:ml-2 sm:gap-2">
-            {slides.map((slide, index) => (
-              <button
-                key={`slide-indicator-${index}`}
-                type="button"
-                aria-label={`Show slide ${index + 1}: ${slide.category.toLowerCase()}`}
-                aria-current={index === activeSlide ? "true" : undefined}
-                onClick={() => setActiveSlide(index)}
-                className={`h-1 rounded-full transition-all duration-300 ${
-                  index === activeSlide
-                    ? "w-8 bg-white"
-                    : "w-3 bg-white/45 hover:bg-white/75"
-                }`}
-              />
-            ))}
-          </div>
-        </div> */}
       </div>
     </section>
   );

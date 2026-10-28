@@ -20,12 +20,12 @@ const collections = [
     title: "Sarees",
     description: "Artful weaves and graceful drapes for every occasion.",
     items: [
-      { name: "Banarasi Silk", image: "photo-1717835735088-4c821959bdaa" },
-      { name: "Kanjivaram Silk", image: "photo-1610030469983-98e550d6193c" },
-      { name: "Cotton & Handloom", image: "photo-1609748340471-14c1fcbad10d" },
-      { name: "Georgette & Chiffon", image: "photo-1617627143750-d86bc21e42bb" },
-      { name: "Bandhani", image: "photo-1753981031189-27bb7bd1c079" },
-      { name: "Festive & Occasion", image: "photo-1717835429626-d6dd3f2c9afb" },
+      { name: "Banarasi Silk", image: "photo-1717835735088-4c821959bdaa", href: "/category/saree/banarshi" },
+      { name: "Kanjivaram Silk", image: "photo-1610030469983-98e550d6193c", href: "/category/saree/kanjivaram" },
+      { name: "Cotton & Handloom", image: "photo-1609748340471-14c1fcbad10d", href: "/category/saree/cotton" },
+      { name: "Georgette & Chiffon", image: "photo-1617627143750-d86bc21e42bb", href: "/category/saree/georgette" },
+      { name: "Bandhani", image: "photo-1753981031189-27bb7bd1c079", href: "/category/saree/bandhani" },
+      { name: "Festive & Occasion", image: "photo-1717835429626-d6dd3f2c9afb", href: "/category/saree/festival" },
     ],
   },
   {
@@ -146,10 +146,10 @@ export default function CategoriesPage() {
                       {String(itemIndex + 1).padStart(2, "0")}
                     </span>
                   </div>
-                  {collection.id === "sarees" && itemIndex === 0 && (
+                  {collection.id === "sarees" && "href" in item && (
                     <Link
-                      href="/category/saree/banarshi"
-                      aria-label="Shop Banarshi silk sarees"
+                      href={item.href}
+                      aria-label={`Shop ${item.name} sarees`}
                       className="absolute inset-0 z-10"
                     />
                   )}
