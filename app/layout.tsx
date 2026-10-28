@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SareeAura | The Art of Indian Elegance",
+  title: "Soni Saree Showroom | The Art of Indian Elegance",
   description: "Discover beautiful sarees and Indian occasion wear, thoughtfully chosen for every story.",
 };
 
