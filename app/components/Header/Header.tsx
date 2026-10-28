@@ -1,5 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import { FiBookmark, FiSearch } from "react-icons/fi";
 import Link from "next/link";
+import AdminLoginModal from "../../../admin/component/AdminLoginModal";
 
 const navigation = [
   { label: "Home", href: "/" },
@@ -7,7 +11,7 @@ const navigation = [
   { label: "Collections", href: "#collections" },
 ];
 
-function Navigation({ mobile = false }: { mobile?: boolean }) {
+function Navigation({ mobile = false, onAdminClick }: { mobile?: boolean; onAdminClick: () => void }) {
   return (
     <nav
       aria-label="Main navigation"
@@ -26,11 +30,20 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
           {item.label}
         </Link>
       ))}
+      <button
+        type="button"
+        onClick={onAdminClick}
+        className="group relative py-2 font-medium transition-colors hover:text-[#e8c5dc] after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-[#d9b5cf] after:transition-transform after:duration-300 after:content-[''] hover:after:origin-left hover:after:scale-x-100"
+      >
+        Admin
+      </button>
     </nav>
   );
 }
 
 export default function Header() {
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+
   return (
     <header className="absolute inset-x-0 top-0 z-50 bg-gradient-to-b from-black/40 via-black/15 to-transparent text-white">
       <div className="mx-auto flex max-w-[1440px] items-center justify-between px-[5%] py-3.5 md:py-4">
@@ -44,7 +57,7 @@ export default function Header() {
           </span>
         </Link>
 
-        <Navigation />
+        <Navigation onAdminClick={() => setIsAdminModalOpen(true)} />
 
         <div className="flex items-center gap-2 sm:gap-3">
           <button
@@ -66,7 +79,8 @@ export default function Header() {
           </a>
         </div>
       </div>
-      <Navigation mobile />
+      <Navigation mobile onAdminClick={() => setIsAdminModalOpen(true)} />
+      <AdminLoginModal open={isAdminModalOpen} onClose={() => setIsAdminModalOpen(false)} />
     </header>
   );
 }
