@@ -8,6 +8,7 @@ import type { AdminSection } from "./adminComponents/sidebar/AdminSidebar";
 import Overview from "./adminComponents/sidebarPages/Overview";
 import Purchasing from "./adminComponents/sidebarPages/Purchasing";
 import Sales from "./adminComponents/sidebarPages/Sales";
+import Inventory from "./adminComponents/sidebarPages/inventory";
 import { logoutAdmin } from "../utils/adminApi";
 import { useAccessibleDialog } from "./adminComponents/useAccessibleDialog";
 
@@ -53,7 +54,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
             <div className="hidden lg:block">
               <p className="text-[11px] text-[var(--admin-subtle)]">Admin workspace</p>
               <p className="mt-0.5 text-[13px] font-semibold">
-                {activeSection === "overview" ? "Your shop at a glance" : activeSection === "sales" ? "Sales performance" : "Purchasing"}
+                {activeSection === "overview" ? "Your shop at a glance" : activeSection === "sales" ? "Sales performance" : activeSection === "purchasing" ? "Purchasing" : "Inventory"}
               </p>
             </div>
             <div className="ml-auto flex items-center gap-3">
@@ -80,7 +81,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
           </header>
 
           <div className="admin-page">
-            {activeSection === "overview" ? <Overview adminName={adminName} /> : activeSection === "sales" ? <Sales /> : <Purchasing />}
+            {activeSection === "overview" ? <Overview adminName={adminName} /> : activeSection === "sales" ? <Sales /> : activeSection === "purchasing" ? <Purchasing /> : <Inventory />}
             <footer className="border-t border-[var(--admin-border)] py-4 text-center text-[10px] text-[var(--admin-subtle)] sm:py-5 sm:text-[11px]">Soni Saree Showroom · Admin workspace</footer>
           </div>
         </section>

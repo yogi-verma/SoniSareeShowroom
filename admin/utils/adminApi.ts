@@ -87,23 +87,48 @@ export type DailySalesInput = {
   transactionDate: string;
 };
 
+export type ProductType = "saree" | "shut" | "rajputi poshak";
+export type ProductCategory = "Banarshi Silk" | "Kanjiviram Silk" | "Cotton and Handloom" | "Georgette & Chiffron" | "Bandhani";
+
+export type Product = {
+  _id: string;
+  productType: ProductType;
+  category: ProductCategory;
+  name: string;
+  price: number;
+  stock: number;
+  photo: { url: string; publicId: string };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProductInput = Omit<Product, "_id" | "photo" | "createdAt" | "updatedAt"> & {
+  photo: File;
+};
+
 type AdminRequestOptions = {
   method: "GET" | "POST";
-  body?: Record<string, unknown>;
+  body?: Record<string, unknown> | FormData;
 };
 
 async function sendAdminRequest<T>(path: string, options: AdminRequestOptions): Promise<T> {
   let response: Response;
   const requestUrl = path.startsWith("/api/admin/") ? path : `${API_BASE_URL}${path}`;
+  const requestBody: BodyInit | undefined = options.body === undefined
+    ? undefined
+    : options.body instanceof FormData
+      ? options.body
+      : JSON.stringify(options.body);
 
   try {
+    const isMultipartBody = options.body instanceof FormData;
     response = await fetch(requestUrl, {
       method: options.method,
       headers: {
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(options.body && !isMultipartBody ? { "Content-Type": "application/json" } : {}),
       },
       credentials: "include",
-      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+      ...(requestBody ? { body: requestBody } : {}),
     });
   } catch {
     throw new Error("Could not reach the admin server. Please try again shortly.");
@@ -169,6 +194,25 @@ export function createDailySales(dailySales: DailySalesInput) {
   return sendAdminRequest<{ message: string; transactions: SalesTransaction[] }>("/api/admin/sales/daily", {
     method: "POST",
     body: dailySales,
+  });
+}
+
+export function getProducts() {
+  return sendAdminRequest<{ products: Product[] }>("/api/admin/products", { method: "GET" });
+}
+
+export function createProduct(product: ProductInput) {
+  const body = new FormData();
+  body.append("productType", product.productType);
+  body.append("category", product.category);
+  body.append("name", product.name);
+  body.append("price", String(product.price));
+  body.append("stock", String(product.stock));
+  body.append("photo", product.photo);
+
+  return sendAdminRequest<{ message: string; product: Product }>("/api/admin/products", {
+    method: "POST",
+    body,
   });
 }
 
