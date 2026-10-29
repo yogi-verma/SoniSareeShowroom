@@ -98,7 +98,9 @@ export default function Header() {
         </div>
       </div>
       <Navigation mobile onAdminClick={handleAdminClick} />
-      <AdminLoginModal open={isAdminModalOpen} onClose={() => setIsAdminModalOpen(false)} />
+      {isAdminModalOpen && (
+        <AdminLoginModal open onClose={() => setIsAdminModalOpen(false)} />
+      )}
     </header>
   );
 }

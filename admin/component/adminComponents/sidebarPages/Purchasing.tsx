@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { FiArrowLeft, FiCalendar, FiChevronDown, FiDownload, FiLoader, FiMapPin, FiPlus, FiRefreshCw, FiShoppingBag, FiTrash2, FiX } from "react-icons/fi";
-import { createPurchase, getPurchases } from "../../../utils/adminApi";
-import type { Purchase, PurchaseInput } from "../../../utils/adminApi";
+import { addPurchasePayment, createPurchase, getPurchases } from "../../../utils/adminApi";
+import type { Purchase, PurchaseInput, PurchasePaymentMethod } from "../../../utils/adminApi";
 import { useAccessibleDialog } from "../useAccessibleDialog";
+import PendingSupplierPayments from "./PendingSupplierPayments";
 
 const places = ["Charkhi Dardi", "Surat", "Jaipur", "Bhiwani", "Rohtak"];
 const categories = ["shut", "saree", "rajputi poshak"];
@@ -23,6 +24,8 @@ function createEmptyForm() {
     items: [createEmptyItem("initial-item")],
     addGst: false,
     gstPercent: "5",
+    initialPaidAmount: "0",
+    paymentMethod: "cash" as PurchasePaymentMethod,
     purchaseDate: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`,
   };
 }
@@ -50,10 +53,20 @@ function roundMoney(value: number) {
   return Math.round(value);
 }
 
-function itemSummary(purchase: Purchase) {
-  if (!purchase.items?.length) return purchase.description || "—";
-  const names = purchase.items.slice(0, 2).map((item) => item.name).join(", ");
-  return purchase.items.length > 2 ? `${names} +${purchase.items.length - 2} more` : names;
+function getPaidAmount(purchase: Purchase) {
+  return purchase.paidAmount ?? purchase.payments?.reduce((total, payment) => total + payment.amount, 0) ?? 0;
+}
+
+function getRemainingAmount(purchase: Purchase) {
+  return Math.max(purchase.total_price - getPaidAmount(purchase), 0);
+}
+
+function getPaymentStatus(purchase: Purchase): "paid" | "pending" {
+  return purchase.paymentStatus ?? (getRemainingAmount(purchase) === 0 ? "paid" : "pending");
+}
+
+function paymentMethodLabel(method: PurchasePaymentMethod) {
+  return method === "online" ? "Online / UPI" : method === "cheque" ? "Cheque" : "Cash";
 }
 
 function escapeHtml(value: string) {
@@ -85,6 +98,9 @@ function saveInvoiceAsPdf(purchase: Purchase, companyName: string) {
   const date = formatDate(purchase.purchaseDate || purchase.createdAt);
   const gstAmount = purchase.gstAmount ?? 0;
   const subtotal = purchase.subtotal ?? purchase.total_price - gstAmount;
+  const paidAmount = getPaidAmount(purchase);
+  const remainingAmount = getRemainingAmount(purchase);
+  const paymentRows = purchase.payments?.map((payment) => `<div class="totalrow"><span>${escapeHtml(paymentMethodLabel(payment.method))} · ${escapeHtml(formatDate(payment.paidAt))}</span><strong>${formatPrice(payment.amount)}</strong></div>`).join("") ?? "";
 
   printWindow.document.write(`<!doctype html>
     <html><head><meta charset="utf-8"><title>Invoice - ${escapeHtml(companyName)}</title>
@@ -108,7 +124,7 @@ function saveInvoiceAsPdf(purchase: Purchase, companyName: string) {
       <section class="billto"><div class="eyebrow">Purchased by</div><strong>Soni Saree Showroom</strong><p>Akoda, M/garh</p></section>
       <section class="meta"><div><span>Category</span>${escapeHtml(purchase.category)}</div><div><span>Supplier location</span>${escapeHtml(purchase.place)}</div><div><span>Purchase date</span>${escapeHtml(date)}</div></section>
       <table><thead><tr><th>Item</th><th class="number">Quantity</th><th class="number">Per price</th><th class="number">Amount</th></tr></thead><tbody>${rows}</tbody></table>
-      <section class="totals"><div class="totalrow"><span>Subtotal</span><strong>${formatPrice(subtotal)}</strong></div>${(purchase.gstPercent ?? 0) > 0 ? `<div class="totalrow"><span>GST (${purchase.gstPercent}%)</span><strong>${formatPrice(gstAmount)}</strong></div>` : ""}<div class="totalrow grand"><span>Total amount</span><span>${formatPrice(purchase.total_price)}</span></div></section>
+      <section class="totals"><div class="totalrow"><span>Subtotal</span><strong>${formatPrice(subtotal)}</strong></div>${(purchase.gstPercent ?? 0) > 0 ? `<div class="totalrow"><span>GST (${purchase.gstPercent}%)</span><strong>${formatPrice(gstAmount)}</strong></div>` : ""}<div class="totalrow grand"><span>Total amount</span><span>${formatPrice(purchase.total_price)}</span></div><div class="totalrow"><span>Paid so far</span><strong>${formatPrice(paidAmount)}</strong></div>${paymentRows}<div class="totalrow"><span>Balance due</span><strong>${formatPrice(remainingAmount)}</strong></div></section>
       <div class="stamp">SONI SAREE SHOWROOM<small>AKODA · M/GARH</small></div><div class="footer">Generated from Soni Saree Showroom admin workspace</div>
     </main><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`);
   printWindow.document.close();
@@ -127,17 +143,29 @@ export default function Purchasing() {
   const [loadError, setLoadError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
   const [form, setForm] = useState(createEmptyForm);
   const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState("");
   const [selectedSupplierKey, setSelectedSupplierKey] = useState<string | null>(null);
+  const [payingPurchase, setPayingPurchase] = useState<Purchase | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PurchasePaymentMethod>("cash");
+  const [clearAllBalance, setClearAllBalance] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
   const dialogRef = useAccessibleDialog(isModalOpen, isSaving, closeModal);
+  const paymentDialogRef = useAccessibleDialog(Boolean(payingPurchase), isSavingPayment, closePaymentModal);
   const subtotal = useMemo(
     () => roundMoney(form.items.reduce((total, item) => total + (Number(item.quantity) || 0) * (Number(item.per_price) || 0), 0)),
     [form.items],
   );
   const gstAmount = form.addGst ? roundMoney(subtotal * Number(form.gstPercent) / 100) : 0;
   const grandTotal = roundMoney(subtotal + gstAmount);
+  const initialPaidAmount = Math.max(Number(form.initialPaidAmount) || 0, 0);
+  const initialRemainingAmount = Math.max(grandTotal - initialPaidAmount, 0);
+  const currentPaymentRemaining = payingPurchase ? getRemainingAmount(payingPurchase) : 0;
+  const paymentAmountValue = Number(paymentAmount) || 0;
+  const remainingAfterPayment = Math.max(currentPaymentRemaining - paymentAmountValue, 0);
 
   const supplierSpend = useMemo(() => {
     const companies = new Map<string, { name: string; spend: number; entries: number }>();
@@ -207,6 +235,22 @@ export default function Purchasing() {
     setFormError("");
   }
 
+  function openPaymentModal(purchase: Purchase) {
+    setPayingPurchase(purchase);
+    setPaymentAmount("");
+    setPaymentMethod("cash");
+    setClearAllBalance(false);
+    setPaymentError("");
+  }
+
+  function closePaymentModal() {
+    if (isSavingPayment) return;
+    setPayingPurchase(null);
+    setPaymentError("");
+    setPaymentAmount("");
+    setClearAllBalance(false);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
@@ -225,6 +269,8 @@ export default function Purchasing() {
       })),
       gstPercent: form.addGst ? Number(form.gstPercent) : 0,
       total_price: grandTotal,
+      initialPaidAmount,
+      ...(initialPaidAmount > 0 ? { paymentMethod: form.paymentMethod } : {}),
       purchaseDate: form.purchaseDate,
     };
 
@@ -238,6 +284,30 @@ export default function Purchasing() {
       setFormError(error instanceof Error ? error.message : "Could not record the purchase.");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleAddPayment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!payingPurchase) return;
+    setPaymentError("");
+    setNotice("");
+    setIsSavingPayment(true);
+
+    try {
+      const result = await addPurchasePayment(payingPurchase._id, {
+        amount: paymentAmountValue,
+        method: paymentMethod,
+      });
+      setPurchases((current) => current.map((purchase) => purchase._id === result.purchase._id ? result.purchase : purchase));
+      setPayingPurchase(null);
+      setPaymentAmount("");
+      setClearAllBalance(false);
+      setNotice("Purchase payment recorded successfully.");
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "Could not record the purchase payment.");
+    } finally {
+      setIsSavingPayment(false);
     }
   }
 
@@ -322,8 +392,11 @@ export default function Purchasing() {
                   </div>
                   <p className="shrink-0 text-right text-[13px] font-semibold text-[#332a35]">{formatPrice(purchase.total_price)}</p>
                 </div>
-                {purchase.items?.length ? <p className="mt-2 line-clamp-2 text-[11px] leading-4 text-[#777078]">{itemSummary(purchase)}</p> : purchase.description && <p className="mt-2 line-clamp-2 text-[11px] leading-4 text-[#777078]">{purchase.description}</p>}
                 <p className="mt-2 flex items-center gap-1.5 text-[10px] text-[#928a92]"><FiCalendar size={12} aria-hidden="true" />{formatDate(purchase.purchaseDate || purchase.createdAt)}</p>
+                <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#f0ece8] pt-2.5">
+                  <PaymentStatusBadge purchase={purchase} />
+                  {getPaymentStatus(purchase) === "pending" && <button type="button" onClick={() => openPaymentModal(purchase)} className="text-[11px] font-semibold text-plum underline-offset-2 hover:underline">Pay now</button>}
+                </div>
               </article>
             ))}
           </div>
@@ -334,9 +407,9 @@ export default function Purchasing() {
                   <th className="px-6 py-3 font-medium">Company</th>
                   <th className="px-4 py-3 font-medium">Place</th>
                   <th className="px-4 py-3 font-medium">Category</th>
-                  <th className="px-4 py-3 font-medium">Items</th>
                   <th className="px-4 py-3 text-right font-medium">Total price</th>
-                  <th className="px-6 py-3 text-right font-medium">Purchase date</th>
+                  <th className="px-4 py-3 text-right font-medium">Purchase date</th>
+                  <th className="px-5 py-3 text-right font-medium">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f2eeea]">
@@ -345,9 +418,14 @@ export default function Purchasing() {
                     <td className="px-6 py-4 font-medium text-plum">{purchase.companyName}</td>
                     <td className="px-4 py-4">{purchase.place}</td>
                     <td className="px-4 py-4"><CategoryBadge category={purchase.category} /></td>
-                    <td className="max-w-[280px] truncate px-4 py-4" title={itemSummary(purchase)}>{itemSummary(purchase)}</td>
                     <td className="px-4 py-4 text-right font-semibold text-[#332a35]">{formatPrice(purchase.total_price)}</td>
-                    <td className="px-6 py-4 text-right text-[#817982]">{formatDate(purchase.purchaseDate || purchase.createdAt)}</td>
+                    <td className="px-4 py-4 text-right text-[#817982]">{formatDate(purchase.purchaseDate || purchase.createdAt)}</td>
+                    <td className="px-5 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <PaymentStatusBadge purchase={purchase} />
+                        {getPaymentStatus(purchase) === "pending" && <button type="button" onClick={() => openPaymentModal(purchase)} className="rounded-md border border-[#e5d3e2] px-2 py-1.5 text-[10px] font-semibold text-plum hover:bg-[#f7eff6]">Pay now</button>}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -371,6 +449,69 @@ export default function Purchasing() {
           <SupplierPieChart suppliers={supplierSpend} onSelect={(name) => setSelectedSupplierKey(name.toLocaleLowerCase())} />
         )}
       </section>
+
+      <PendingSupplierPayments purchases={purchases} isLoading={isLoading} hasError={Boolean(loadError)} />
+
+      {payingPurchase && (
+        <div className="admin-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closePaymentModal(); }}>
+          <section ref={paymentDialogRef} role="dialog" aria-modal="true" aria-labelledby="purchase-payment-title" className="admin-modal relative p-5 sm:p-6">
+            <button type="button" onClick={closePaymentModal} disabled={isSavingPayment} aria-label="Close payment dialog" className="admin-icon-button absolute right-3 top-3 disabled:opacity-50 sm:right-4 sm:top-4"><FiX size={18} /></button>
+            <p className="admin-page-kicker mb-1">Purchase payment</p>
+            <h2 id="purchase-payment-title" className="pr-10 font-serif text-xl font-medium text-[#2b202c] sm:text-2xl">Pay supplier balance</h2>
+            <p className="mt-1 text-sm text-[#817982]">{payingPurchase.companyName}</p>
+
+            <div className="mt-5 grid grid-cols-2 gap-2.5 rounded-xl bg-[#fbfaf8] p-3.5 sm:grid-cols-3">
+              <div><p className="text-[10px] text-[#817982]">Total</p><p className="mt-1 text-sm font-semibold text-[#332a35]">{formatPrice(payingPurchase.total_price)}</p></div>
+              <div><p className="text-[10px] text-[#817982]">Paid so far</p><p className="mt-1 text-sm font-semibold text-[#356b57]">{formatPrice(getPaidAmount(payingPurchase))}</p></div>
+              <div className="col-span-2 sm:col-span-1"><p className="text-[10px] text-[#817982]">Remaining</p><p className="mt-1 text-sm font-semibold text-[#8a682e]">{formatPrice(currentPaymentRemaining)}</p></div>
+            </div>
+
+            {payingPurchase.payments?.length ? (
+              <div className="mt-4 rounded-xl border border-[#eee8e2] px-3.5 py-3">
+                <h3 className="text-xs font-semibold text-[#514852]">Payment history</h3>
+                <ul className="mt-2 max-h-28 space-y-2 overflow-y-auto">
+                  {payingPurchase.payments.map((payment, index) => (
+                    <li key={payment._id ?? `${payment.paidAt}-${index}`} className="flex items-center justify-between gap-3 text-[11px]">
+                      <span className="text-[#817982]">{paymentMethodLabel(payment.method)} · {formatDate(payment.paidAt)}</span>
+                      <span className="font-medium text-[#332a35]">{formatPrice(payment.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="mt-4 rounded-xl border border-[#eee8e2] px-3.5 py-3 text-[11px] text-[#817982]">No payments have been recorded for this purchase.</p>
+            )}
+
+            <form onSubmit={handleAddPayment} className="mt-5 space-y-4">
+              <div>
+                <label htmlFor="purchase-payment-amount" className="admin-field-label">Payment amount</label>
+                <input id="purchase-payment-amount" type="number" required min="1" max={currentPaymentRemaining} step="1" value={paymentAmount} disabled={clearAllBalance} onChange={(event) => setPaymentAmount(event.target.value)} className="admin-field" placeholder="Enter amount" />
+              </div>
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-[#e8e2dc] px-3 py-2.5 text-xs text-[#514852]">
+                <input type="checkbox" checked={clearAllBalance} onChange={(event) => { const checked = event.target.checked; setClearAllBalance(checked); setPaymentAmount(checked ? String(currentPaymentRemaining) : ""); }} className="mt-0.5 h-4 w-4 accent-[#401d3c]" />
+                <span><strong className="font-semibold">Clear all remaining balance</strong><span className="mt-0.5 block text-[10px] text-[#817982]">Pay {formatPrice(currentPaymentRemaining)} and mark this purchase paid.</span></span>
+              </label>
+              <div>
+                <label htmlFor="purchase-payment-method-now" className="admin-field-label">Pay via</label>
+                <select id="purchase-payment-method-now" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PurchasePaymentMethod)} className="admin-field">
+                  <option value="cash">Cash</option>
+                  <option value="online">Online / UPI</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+              <p className="flex justify-between rounded-lg bg-[#f8f5f1] px-3 py-2.5 text-xs"><span className="text-[#716a73]">Balance after this payment</span><strong className="text-[#332a35]">{formatPrice(remainingAfterPayment)}</strong></p>
+              {paymentError && <p role="alert" className="rounded-lg border border-[#f0d8d6] bg-[#fff6f5] px-3 py-2.5 text-xs text-[#a13d39]">{paymentError}</p>}
+              <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+                <button type="button" onClick={closePaymentModal} disabled={isSavingPayment} className="admin-button-secondary">Cancel</button>
+                <button type="submit" disabled={isSavingPayment || paymentAmountValue < 1 || paymentAmountValue > currentPaymentRemaining} className="admin-button-primary">
+                  {isSavingPayment && <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
+                  {isSavingPayment ? "Saving payment…" : "Submit payment"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
 
       {isModalOpen && (
         <div
@@ -505,6 +646,23 @@ export default function Purchasing() {
                   <div className="flex justify-between gap-3 text-[#817982]"><span>Subtotal</span><span>{formatPrice(subtotal)}</span></div>
                   {form.addGst && <div className="flex justify-between gap-3 text-[#817982]"><span>GST ({form.gstPercent}%)</span><span>{formatPrice(gstAmount)}</span></div>}
                   <div className="flex justify-between gap-3 border-t border-[#f0ece8] pt-2 text-sm font-semibold text-[#332a35]"><span>Total purchase cost</span><span>{formatPrice(grandTotal)}</span></div>
+                  <div className="grid gap-2 border-t border-[#f0ece8] pt-3 sm:grid-cols-[1fr_145px] sm:items-center">
+                    <label htmlFor="purchase-initial-paid" className="text-xs font-semibold text-[#514852]">Admin pays now</label>
+                    <input id="purchase-initial-paid" type="number" min="0" max={grandTotal} step="1" value={form.initialPaidAmount} onChange={(event) => setForm({ ...form, initialPaidAmount: event.target.value })} className="admin-field" placeholder="0" />
+                  </div>
+                  {initialPaidAmount > 0 && (
+                    <div className="grid gap-2 sm:grid-cols-[1fr_145px] sm:items-center">
+                      <label htmlFor="purchase-payment-method" className="text-xs font-semibold text-[#514852]">Paid via</label>
+                      <select id="purchase-payment-method" value={form.paymentMethod} onChange={(event) => setForm({ ...form, paymentMethod: event.target.value as PurchasePaymentMethod })} className="admin-field">
+                        <option value="cash">Cash</option>
+                        <option value="online">Online / UPI</option>
+                        <option value="cheque">Cheque</option>
+                      </select>
+                    </div>
+                  )}
+                  <div className="flex justify-between gap-3 rounded-lg bg-[#fbfaf8] px-3 py-2.5 text-xs text-[#625a63]">
+                    <span>Remaining balance</span><span className="font-semibold text-[#332a35]">{formatPrice(initialRemainingAmount)}</span>
+                  </div>
                 </div>
               </section>
 
@@ -529,6 +687,16 @@ function CategoryBadge({ category }: { category: string }) {
   return (
     <span className={`admin-badge capitalize ${categoryStyle(category)}`}>
       {category}
+    </span>
+  );
+}
+
+function PaymentStatusBadge({ purchase }: { purchase: Purchase }) {
+  const status = getPaymentStatus(purchase);
+  return (
+    <span className={`admin-badge capitalize ${status === "paid" ? "border-[#cfe4dc] bg-[#eef7f3] text-[#356b57]" : "border-[#efdfbc] bg-[#fbf5e8] text-[#8a682e]"}`}>
+      <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${status === "paid" ? "bg-[#4c8c6c]" : "bg-[#b68a3f]"}`} />
+      {status}
     </span>
   );
 }
@@ -657,6 +825,7 @@ function SupplierPurchasesView({ companyName, purchases, onBack }: {
                       <span className="inline-flex items-center gap-1"><FiCalendar size={12} />{formatDate(purchase.purchaseDate || purchase.createdAt)}</span>
                       <span className="inline-flex items-center gap-1"><FiMapPin size={12} />{purchase.place}</span>
                       <CategoryBadge category={purchase.category} />
+                      <PaymentStatusBadge purchase={purchase} />
                     </div>
                   </div>
                   <button type="button" onClick={() => saveInvoiceAsPdf(purchase, companyName)} className="inline-flex w-fit shrink-0 items-center justify-center gap-2 rounded-lg border border-[#dfd1dc] bg-[#fbf6fa] px-3 py-2 text-xs font-semibold text-plum transition hover:bg-[#f5ebf3]">
@@ -681,6 +850,9 @@ function SupplierPurchasesView({ companyName, purchases, onBack }: {
                   <div className="flex justify-between gap-3 text-[#817982]"><span>Subtotal</span><span>{formatPrice(purchase.subtotal ?? purchase.total_price - (purchase.gstAmount ?? 0))}</span></div>
                   {(purchase.gstPercent ?? 0) > 0 && <div className="flex justify-between gap-3 text-[#817982]"><span>GST ({purchase.gstPercent}%)</span><span>{formatPrice(purchase.gstAmount ?? 0)}</span></div>}
                   <div className="flex justify-between gap-3 border-t border-[#eee8e2] pt-2 text-sm font-semibold text-[#332a35]"><span>Total amount</span><span>{formatPrice(purchase.total_price)}</span></div>
+                  <div className="flex justify-between gap-3 text-[#817982]"><span>Paid so far</span><span>{formatPrice(getPaidAmount(purchase))}</span></div>
+                  {purchase.payments?.map((payment, index) => <div key={payment._id ?? `${payment.paidAt}-${index}`} className="flex justify-between gap-3 pl-2 text-[10px] text-[#928a92]"><span>{paymentMethodLabel(payment.method)} · {formatDate(payment.paidAt)}</span><span>{formatPrice(payment.amount)}</span></div>)}
+                  <div className="flex justify-between gap-3 border-t border-[#eee8e2] pt-2 font-semibold text-[#8a682e]"><span>Remaining balance</span><span>{formatPrice(getRemainingAmount(purchase))}</span></div>
                 </div>
                 <div className="mt-5 flex justify-end"><div className="rounded-full border-2 border-[#9c5260]/70 px-4 py-2 text-center text-[9px] font-bold leading-4 tracking-[0.13em] text-[#9c5260]">SONI SAREE SHOWROOM<br /><span className="font-normal tracking-normal">AKODA · M/GARH</span></div></div>
               </article>

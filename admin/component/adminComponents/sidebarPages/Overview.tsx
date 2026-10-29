@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiActivity, FiAward, FiDollarSign, FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
 import { getPurchases, getSalesTransactions } from "../../../utils/adminApi";
 import type { Purchase, SalesTransaction } from "../../../utils/adminApi";
+import PendingSupplierPayments from "./PendingSupplierPayments";
 import SalesTrendChart from "./SalesTrendChart";
 
 function formatPrice(amount: number) {
@@ -117,6 +118,8 @@ export default function Overview({ adminName }: { adminName: string }) {
       <div className="mt-5 sm:mt-6">
         <SalesTrendChart transactions={transactions} isLoading={isLoading} />
       </div>
+
+      <PendingSupplierPayments purchases={purchases} isLoading={isLoading} hasError={Boolean(loadError)} />
 
       <section className="admin-panel mt-6 overflow-hidden">
         <div className="flex items-center gap-3 p-4 sm:p-5">

@@ -44,10 +44,10 @@ export default function AdminSidebar({ activeSection, onSelectSection }: AdminSi
   return (
     <>
       <aside className="sticky top-0 hidden h-screen w-[var(--admin-sidebar-width)] shrink-0 flex-col border-r border-[var(--admin-border)] bg-white px-4 py-5 lg:flex">
-        <Link href="/" className="mb-8 flex items-center gap-3 px-1" aria-label="Soni Saree Showroom home">
+        <div className="mb-8 flex items-center gap-3 px-1" aria-label="Soni Saree Showroom home">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-plum font-serif text-lg text-white">❋</span>
-          <span className="font-serif text-[14px] leading-tight">Soni Saree<small className="mt-1 block font-sans text-[9px] tracking-[0.16em] text-[#89818a]">SHOWROOM</small></span>
-        </Link>
+          <span className="font-serif text-[14px] leading-tight">Admin Dashboard</span>
+        </div>
 
         <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#928a92]">Workspace</p>
         {sectionLinks()}

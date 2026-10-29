@@ -238,7 +238,8 @@
   box-shadow: 0 24px 64px rgb(20 12 20 / 24%);
 }
 
-.admin-login-modal { width: min(100%, 720px); }
+.admin-login-modal { width: min(100%, 420px); }
+.admin-confirm-modal { width: min(100%, 420px); }
 
 @media (max-width: 1023px) {
   .admin-page { padding: 20px 20px 16px; }
@@ -252,6 +253,8 @@
   .admin-panel-header { align-items: flex-start; padding: 14px; }
   .admin-modal-backdrop { align-items: flex-end; padding: 0; }
   .admin-modal { max-height: 92dvh; border-radius: 16px 16px 0 0; }
+  .admin-centered-backdrop { align-items: center; padding: 16px; }
+  .admin-centered-backdrop .admin-modal { max-height: 92dvh; border-radius: var(--admin-radius-lg); }
 }
 
 @media (prefers-reduced-motion: reduce) {

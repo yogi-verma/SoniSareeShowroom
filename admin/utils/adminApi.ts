@@ -30,11 +30,23 @@ export type Purchase = {
   gstPercent?: number;
   gstAmount?: number;
   total_price: number;
+  payments?: PurchasePayment[];
+  paidAmount?: number;
+  paymentStatus?: "paid" | "pending";
   purchaseDate?: string;
   createdAt: string;
 };
 
 export type PurchaseItemInput = Omit<PurchaseItem, "_id" | "total">;
+
+export type PurchasePaymentMethod = "cash" | "online" | "cheque";
+
+export type PurchasePayment = {
+  _id?: string;
+  amount: number;
+  method: PurchasePaymentMethod;
+  paidAt: string;
+};
 
 export type PurchaseInput = {
   companyName: string;
@@ -45,7 +57,14 @@ export type PurchaseInput = {
   gstPercent: number;
   /** Sent for compatibility with older deployed purchase controllers; the current API recalculates this from items and GST. */
   total_price: number;
+  initialPaidAmount: number;
+  paymentMethod?: PurchasePaymentMethod;
   purchaseDate: string;
+};
+
+export type PurchasePaymentInput = {
+  amount: number;
+  method: PurchasePaymentMethod;
 };
 
 export type SalesTransactionType = "online" | "cash" | "expense";
@@ -124,6 +143,13 @@ export function createPurchase(purchase: PurchaseInput) {
   return sendAdminRequest<{ message: string; purchase: Purchase }>("/api/admin/purchases", {
     method: "POST",
     body: purchase,
+  });
+}
+
+export function addPurchasePayment(purchaseId: string, payment: PurchasePaymentInput) {
+  return sendAdminRequest<{ message: string; purchase: Purchase }>(`/api/admin/purchases/${encodeURIComponent(purchaseId)}/payments`, {
+    method: "POST",
+    body: payment,
   });
 }
 
