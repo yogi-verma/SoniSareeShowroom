@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { FiCalendar, FiChevronDown, FiPlus, FiRefreshCw, FiShoppingBag, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiChevronDown, FiLoader, FiMapPin, FiPlus, FiRefreshCw, FiShoppingBag, FiX } from "react-icons/fi";
 import { createPurchase, getPurchases } from "../../../utils/adminApi";
 import type { Purchase, PurchaseInput } from "../../../utils/adminApi";
 
@@ -40,6 +40,12 @@ function formatDate(value: string) {
   }).format(new Date(value.length === 10 ? `${value}T00:00:00.000Z` : value));
 }
 
+function categoryStyle(category: string) {
+  if (category === "saree") return "border-[#e5d3e2] bg-[#f7eff6] text-[#62385f]";
+  if (category === "shut") return "border-[#efdfbc] bg-[#fbf5e8] text-[#8a682e]";
+  return "border-[#cfe4dc] bg-[#eef7f3] text-[#356b57]";
+}
+
 export default function Purchasing() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +55,27 @@ export default function Purchasing() {
   const [form, setForm] = useState(createEmptyForm);
   const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState("");
+  const [selectedSupplierKey, setSelectedSupplierKey] = useState<string | null>(null);
+
+  const supplierSpend = useMemo(() => {
+    const companies = new Map<string, { name: string; spend: number; entries: number }>();
+    for (const purchase of purchases) {
+      const key = purchase.companyName.trim().toLocaleLowerCase();
+      const company = companies.get(key) ?? { name: purchase.companyName.trim(), spend: 0, entries: 0 };
+      company.spend += purchase.total_price;
+      company.entries += 1;
+      companies.set(key, company);
+    }
+    return [...companies.values()].sort((first, second) => second.spend - first.spend);
+  }, [purchases]);
+
+  const selectedSupplier = supplierSpend.find((supplier) => supplier.name.toLocaleLowerCase() === selectedSupplierKey) ?? null;
+  const selectedSupplierPurchases = useMemo(() => {
+    if (!selectedSupplierKey) return [];
+    return purchases
+      .filter((purchase) => purchase.companyName.trim().toLocaleLowerCase() === selectedSupplierKey)
+      .sort((first, second) => new Date(second.purchaseDate || second.createdAt).getTime() - new Date(first.purchaseDate || first.createdAt).getTime());
+  }, [purchases, selectedSupplierKey]);
 
   async function loadPurchases() {
     setIsLoading(true);
@@ -67,6 +94,12 @@ export default function Purchasing() {
   useEffect(() => {
     void loadPurchases();
   }, []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeoutId = window.setTimeout(() => setNotice(""), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [notice]);
 
   function closeModal() {
     if (isSaving) return;
@@ -101,6 +134,16 @@ export default function Purchasing() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  if (selectedSupplierKey) {
+    return (
+      <SupplierPurchasesView
+        companyName={selectedSupplier?.name ?? selectedSupplierKey}
+        purchases={selectedSupplierPurchases}
+        onBack={() => setSelectedSupplierKey(null)}
+      />
+    );
   }
 
   return (
@@ -152,7 +195,7 @@ export default function Purchasing() {
             <button type="button" onClick={() => void loadPurchases()} className="mt-3 text-xs font-semibold text-plum hover:underline">Try again</button>
           </div>
         ) : isLoading ? (
-          <div className="border-t border-[#f0ece8] px-6 py-12 text-center text-sm text-[#928a92]">Loading purchases…</div>
+          <div className="border-t border-[#f0ece8] px-6 py-10"><LoadingSpinner label="Loading purchases" /></div>
         ) : purchases.length === 0 ? (
           <div className="border-t border-[#f0ece8] px-6 py-14 text-center">
             <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#f6f0f5] text-plum"><FiShoppingBag size={20} /></span>
@@ -167,7 +210,10 @@ export default function Purchasing() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="truncate text-[13px] font-semibold text-plum">{purchase.companyName}</h3>
-                    <p className="mt-1 text-[11px] text-[#817982]">{purchase.place} <span aria-hidden="true">·</span> <span className="capitalize">{purchase.category}</span></p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[#817982]">
+                      <span>{purchase.place}</span>
+                      <CategoryBadge category={purchase.category} />
+                    </div>
                   </div>
                   <p className="shrink-0 text-right text-[13px] font-semibold text-[#332a35]">{formatPrice(purchase.total_price)}</p>
                 </div>
@@ -193,7 +239,7 @@ export default function Purchasing() {
                   <tr key={purchase._id} className="text-[#554e57]">
                     <td className="px-6 py-4 font-medium text-plum">{purchase.companyName}</td>
                     <td className="px-4 py-4">{purchase.place}</td>
-                    <td className="px-4 py-4 capitalize">{purchase.category}</td>
+                    <td className="px-4 py-4"><CategoryBadge category={purchase.category} /></td>
                     <td className="max-w-[280px] truncate px-4 py-4" title={purchase.description || undefined}>{purchase.description || "—"}</td>
                     <td className="px-4 py-4 text-right font-semibold text-[#332a35]">{formatPrice(purchase.total_price)}</td>
                     <td className="px-6 py-4 text-right text-[#817982]">{formatDate(purchase.purchaseDate || purchase.createdAt)}</td>
@@ -203,6 +249,21 @@ export default function Purchasing() {
             </table>
           </div>
           </>
+        )}
+      </section>
+
+      <section className="mt-5 overflow-hidden rounded-xl border border-[#ece6df] bg-white p-4 shadow-[0_4px_18px_rgba(48,23,47,0.035)] sm:mt-6 sm:rounded-2xl sm:p-5 md:p-6">
+        <div className="mb-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">Supplier insights</p>
+          <h2 className="mt-1 font-serif text-lg sm:text-xl">Purchase share by company</h2>
+          <p className="mt-1 text-[11px] text-[#928a92] sm:text-xs">Each slice shows that company’s share of total purchasing spend.</p>
+        </div>
+        {isLoading ? (
+          <LoadingSpinner label="Loading supplier chart" />
+        ) : supplierSpend.length === 0 ? (
+          <p className="rounded-xl bg-[#fcfbf9] px-4 py-8 text-center text-xs text-[#928a92]">The supplier pie chart will appear after purchases are recorded.</p>
+        ) : (
+          <SupplierPieChart suppliers={supplierSpend} onSelect={(name) => setSelectedSupplierKey(name.toLocaleLowerCase())} />
         )}
       </section>
 
@@ -283,6 +344,150 @@ export default function Purchasing() {
           </section>
         </div>
       )}
+    </div>
+  );
+}
+
+function CategoryBadge({ category }: { category: string }) {
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium capitalize ${categoryStyle(category)}`}>
+      {category}
+    </span>
+  );
+}
+
+function LoadingSpinner({ label }: { label: string }) {
+  return (
+    <div role="status" aria-label={label} className="flex min-h-14 items-center justify-center text-plum">
+      <FiLoader size={20} className="animate-spin" aria-hidden="true" />
+      <span className="sr-only">{label}</span>
+    </div>
+  );
+}
+
+const pieColors = ["#492447", "#a56c8f", "#c8a56c", "#6b927f", "#82769b", "#d28c71", "#6d8da1", "#bd7890", "#87945f", "#a77d4d"];
+
+function SupplierPieChart({ suppliers, onSelect }: {
+  suppliers: { name: string; spend: number; entries: number }[];
+  onSelect: (name: string) => void;
+}) {
+  const totalSpend = suppliers.reduce((total, supplier) => total + supplier.spend, 0);
+  let currentAngle = 0;
+  const segments = suppliers.map((supplier, index) => {
+    const startAngle = currentAngle;
+    currentAngle += totalSpend > 0 ? (supplier.spend / totalSpend) * 360 : 0;
+    return `${pieColors[index % pieColors.length]} ${startAngle}deg ${currentAngle}deg`;
+  });
+  const chartBackground = totalSpend > 0
+    ? `conic-gradient(${segments.join(", ")})`
+    : "conic-gradient(#e9e3dc 0deg 360deg)";
+
+  return (
+    <div className="grid items-center gap-6 md:grid-cols-[minmax(220px,0.8fr)_1.2fr] md:gap-10">
+      <div className="flex justify-center">
+        <div
+          role="img"
+          aria-label={`Purchase spend by company. Total ${formatPrice(totalSpend)}.`}
+          className="relative h-52 w-52 rounded-full sm:h-60 sm:w-60"
+          style={{ background: chartBackground }}
+        >
+          <div className="absolute inset-[24%] flex flex-col items-center justify-center rounded-full border border-[#f0ece8] bg-white text-center shadow-inner">
+            <span className="text-[10px] text-[#928a92]">Total spend</span>
+            <strong className="mt-1 max-w-full px-2 text-sm text-[#332a35]">{formatPrice(totalSpend)}</strong>
+          </div>
+        </div>
+      </div>
+      <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+        {suppliers.map((supplier, index) => {
+          const share = totalSpend > 0 ? (supplier.spend / totalSpend) * 100 : 0;
+          return (
+            <button
+              key={supplier.name}
+              type="button"
+              onClick={() => onSelect(supplier.name)}
+              className="flex w-full items-center gap-3 rounded-xl border border-[#f0ece8] bg-[#fffdfa] px-3 py-2.5 text-left transition hover:border-[#d8c6d6] hover:bg-[#fbf6fa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/30"
+              aria-label={`View purchases from ${supplier.name}`}
+            >
+              <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: pieColors[index % pieColors.length] }} />
+              <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#514852]">{supplier.name}</span>
+              <span className="shrink-0 text-right">
+                <span className="block text-xs font-semibold text-[#332a35]">{formatPrice(supplier.spend)}</span>
+                <span className="text-[10px] text-[#928a92]">{share.toFixed(1)}% · {supplier.entries} {supplier.entries === 1 ? "purchase" : "purchases"}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SupplierPurchasesView({ companyName, purchases, onBack }: {
+  companyName: string;
+  purchases: Purchase[];
+  onBack: () => void;
+}) {
+  const totalSpend = purchases.reduce((total, purchase) => total + purchase.total_price, 0);
+  const latestPurchaseDate = purchases[0] ? purchases[0].purchaseDate || purchases[0].createdAt : null;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onBack}
+        className="mb-5 inline-flex items-center gap-2 rounded-lg border border-[#e6dfd8] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#514852] shadow-sm transition hover:border-[#d8c6d6] hover:bg-[#fbf6fa] hover:text-plum sm:mb-6"
+      >
+        <FiArrowLeft size={15} /> Back to purchasing
+      </button>
+
+      <div className="mb-5 sm:mb-6">
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold sm:text-xs">Supplier purchase history</p>
+        <h1 className="break-words font-serif text-[26px] leading-tight text-[#29232b] sm:text-3xl lg:text-4xl">{companyName}</h1>
+        <p className="mt-1.5 text-[13px] text-[#817982] sm:text-sm">Purchases from this supplier, newest first.</p>
+      </div>
+
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:mb-6 sm:grid-cols-3 sm:gap-4">
+        <article className="rounded-xl border border-[#ece6df] bg-white p-4 sm:rounded-2xl sm:p-5">
+          <p className="text-[10px] font-medium text-[#817982] sm:text-xs">Total purchased</p>
+          <p className="mt-2 text-base font-semibold text-[#332a35] sm:text-xl">{formatPrice(totalSpend)}</p>
+        </article>
+        <article className="rounded-xl border border-[#ece6df] bg-white p-4 sm:rounded-2xl sm:p-5">
+          <p className="text-[10px] font-medium text-[#817982] sm:text-xs">Purchase entries</p>
+          <p className="mt-2 text-base font-semibold text-[#332a35] sm:text-xl">{purchases.length}</p>
+        </article>
+        <article className="col-span-2 rounded-xl border border-[#ece6df] bg-white p-4 sm:col-span-1 sm:rounded-2xl sm:p-5">
+          <p className="text-[10px] font-medium text-[#817982] sm:text-xs">Latest purchase</p>
+          <p className="mt-2 text-base font-semibold text-[#332a35] sm:text-xl">{latestPurchaseDate ? formatDate(latestPurchaseDate) : "—"}</p>
+        </article>
+      </div>
+
+      <section className="overflow-hidden rounded-xl border border-[#ece6df] bg-white shadow-[0_4px_18px_rgba(48,23,47,0.035)] sm:rounded-2xl">
+        <div className="px-4 py-4 sm:px-5 sm:py-4 md:px-6">
+          <h2 className="font-serif text-lg sm:text-xl">Purchases by date</h2>
+          <p className="mt-1 text-[11px] text-[#928a92] sm:text-xs">{purchases.length} {purchases.length === 1 ? "purchase" : "purchases"} from {companyName}</p>
+        </div>
+        {purchases.length === 0 ? (
+          <div className="border-t border-[#f0ece8] px-5 py-12 text-center text-sm text-[#928a92]">No purchases found for this supplier.</div>
+        ) : (
+          <div className="grid gap-3 border-t border-[#f0ece8] bg-[#fcfbf9] p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-3">
+            {purchases.map((purchase) => (
+              <article key={purchase._id} className="rounded-xl border border-[#ece6df] bg-white p-4 shadow-[0_3px_12px_rgba(48,23,47,0.03)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(48,23,47,0.07)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-[11px] font-medium text-[#817982]"><FiCalendar size={13} className="shrink-0 text-[#a07848]" />{formatDate(purchase.purchaseDate || purchase.createdAt)}</p>
+                    <p className="mt-2 flex items-center gap-1.5 text-[11px] text-[#817982]"><FiMapPin size={13} className="shrink-0" />{purchase.place}</p>
+                  </div>
+                  <p className="shrink-0 text-right text-sm font-semibold text-[#332a35]">{formatPrice(purchase.total_price)}</p>
+                </div>
+                <div className="mt-3 border-t border-[#f2eeea] pt-3">
+                  <CategoryBadge category={purchase.category} />
+                </div>
+                {purchase.description && <p className="mt-3 border-t border-[#f2eeea] pt-3 text-xs leading-5 text-[#625a63]">{purchase.description}</p>}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

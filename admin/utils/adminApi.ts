@@ -36,6 +36,13 @@ export type SalesTransaction = {
 
 export type SalesTransactionInput = Omit<SalesTransaction, "_id" | "createdAt">;
 
+export type DailySalesInput = {
+  onlineAmount: number;
+  cashAmount: number;
+  miscellaneousAmount: number;
+  transactionDate: string;
+};
+
 type AdminRequestOptions = {
   method: "GET" | "POST";
   body?: Record<string, string | number>;
@@ -85,11 +92,11 @@ export function logoutAdmin() {
 }
 
 export function getPurchases() {
-  return sendAdminRequest<{ purchases: Purchase[] }>("/api/purchases", { method: "GET" });
+  return sendAdminRequest<{ purchases: Purchase[] }>("/api/admin/purchases", { method: "GET" });
 }
 
 export function createPurchase(purchase: PurchaseInput) {
-  return sendAdminRequest<{ message: string; purchase: Purchase }>("/api/purchases", {
+  return sendAdminRequest<{ message: string; purchase: Purchase }>("/api/admin/purchases", {
     method: "POST",
     body: purchase,
   });
@@ -104,6 +111,13 @@ export function createSalesTransaction(transaction: SalesTransactionInput) {
   return sendAdminRequest<{ message: string; transaction: SalesTransaction }>("/api/admin/sales", {
     method: "POST",
     body: transaction,
+  });
+}
+
+export function createDailySales(dailySales: DailySalesInput) {
+  return sendAdminRequest<{ message: string; transactions: SalesTransaction[] }>("/api/admin/sales/daily", {
+    method: "POST",
+    body: dailySales,
   });
 }
 

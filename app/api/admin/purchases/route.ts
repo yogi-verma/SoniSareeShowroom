@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const backendResponse = await fetch(`${ADMIN_API_URL}/api/purchases/createPurchase`, {
+    const backendResponse = await fetch(`${ADMIN_API_URL}/api/purchases`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
