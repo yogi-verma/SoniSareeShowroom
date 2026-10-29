@@ -15,6 +15,7 @@ import {
 } from "react-icons/fi";
 import { createDailySales, getSalesTransactions } from "../../../utils/adminApi";
 import type { SalesTransaction } from "../../../utils/adminApi";
+import { useAccessibleDialog } from "../useAccessibleDialog";
 import SalesTrendChart from "./SalesTrendChart";
 
 function getLocalDate() {
@@ -32,13 +33,13 @@ function createForm(date: string) {
   return { onlineAmount: "0", cashAmount: "0", miscellaneousAmount: "0", transactionDate: date };
 }
 
-const fieldClassName = "w-full rounded-xl border border-[#e6dfe5] bg-white px-3.5 py-3 text-sm text-[#332a35] outline-none transition placeholder:text-[#b0a8b0] hover:border-[#d1c2cf] focus:border-[#a87c9e] focus:ring-4 focus:ring-[#a87c9e]/10";
+const fieldClassName = "admin-field";
 
 function formatPrice(amount: number) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(amount);
 }
 
@@ -102,6 +103,7 @@ export default function Sales() {
   const [form, setForm] = useState(() => createForm(getLocalDate()));
   const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState("");
+  const dialogRef = useAccessibleDialog(isModalOpen, isSaving, closeModal);
 
   const loadTransactions = useCallback(async () => {
     setIsLoading(true);
@@ -117,8 +119,22 @@ export default function Sales() {
   }, []);
 
   useEffect(() => {
-    void loadTransactions();
-  }, [loadTransactions]);
+    let isCurrent = true;
+    getSalesTransactions()
+      .then((result) => {
+        if (isCurrent) setTransactions(result.transactions);
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) setLoadError(error instanceof Error ? error.message : "Could not load sales transactions.");
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!notice) return;
@@ -188,16 +204,16 @@ export default function Sales() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-col justify-between gap-3 sm:mb-6 sm:flex-row sm:items-end sm:gap-4">
+      <div className="admin-page-header">
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold sm:mb-2 sm:text-xs sm:tracking-[0.22em]">Shop performance</p>
-          <h1 className="font-serif text-[28px] leading-tight sm:text-3xl lg:text-4xl">Sales</h1>
-          <p className="mt-1.5 max-w-xl text-[13px] leading-5 text-[#817982] sm:mt-2 sm:text-sm">Review collections, daily totals, and shop expenses.</p>
+          <p className="admin-page-kicker">Shop performance</p>
+          <h1 className="admin-page-title">Sales</h1>
+          <p className="admin-page-description">Review collections, daily totals, and shop expenses.</p>
         </div>
         <button
           type="button"
           onClick={openModal}
-          className="inline-flex w-fit items-center gap-2 rounded-lg bg-plum px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#432140] sm:rounded-xl sm:px-4 sm:py-3 sm:text-sm"
+          className="admin-button-primary"
         >
           <FiPlus size={16} /> Enter daily sales
         </button>
@@ -205,24 +221,24 @@ export default function Sales() {
 
       {notice && <p role="status" className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">{notice}</p>}
 
-      <section aria-label="All-time sales" className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+      <section aria-label="All-time sales" className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <SummaryCard label="All-time total sales" amount={allTime.total} icon={FiShoppingBag} accent="plum" loading={isLoading} />
         <SummaryCard label="Online / UPI sales" amount={allTime.online} icon={FiActivity} accent="gold" loading={isLoading} />
         <SummaryCard label="Cash sales" amount={allTime.cash} icon={FiDollarSign} accent="plum" loading={isLoading} />
       </section>
 
-      <section className="mb-5 overflow-hidden rounded-xl border border-[#ece6df] bg-white shadow-[0_4px_18px_rgba(48,23,47,0.035)] sm:rounded-2xl">
+      <section className="admin-panel mb-5 overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-4 md:px-6">
           <div>
-            <h2 className="font-serif text-lg sm:text-xl">Last 10 days</h2>
-            <p className="mt-1 text-[11px] text-[#928a92] sm:text-xs">Daily online, cash, expenses, and total sales</p>
+            <h2 className="admin-panel-title">Last 10 days</h2>
+            <p className="admin-panel-description">Daily online, cash, expenses, and total sales</p>
           </div>
           <button
             type="button"
             onClick={() => void loadTransactions()}
             disabled={isLoading}
             aria-label="Refresh sales"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#e6dfd8] text-[#514952] transition hover:bg-[#faf8f5] disabled:opacity-50"
+            className="admin-icon-button border-[var(--admin-border-strong)] disabled:opacity-50"
           >
             <FiRefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
           </button>
@@ -243,7 +259,7 @@ export default function Sales() {
               {recentDates.map((date) => <DailySalesCard key={date} date={date} totals={days.get(date)} />)}
             </div>
             <div className="hidden overflow-x-auto border-t border-[#f0ece8] sm:block">
-              <table className="w-full min-w-[620px] text-left text-xs">
+              <table className="admin-table min-w-[620px]">
                 <thead className="bg-[#fcfbf9] text-[10px] uppercase tracking-[0.12em] text-[#968d96]">
                   <tr>
                     <th className="px-5 py-3 font-medium">Date</th>
@@ -264,11 +280,11 @@ export default function Sales() {
 
       <SalesTrendChart transactions={transactions} isLoading={isLoading} />
 
-      <section className="overflow-hidden rounded-xl border border-[#ece6df] bg-white shadow-[0_4px_18px_rgba(48,23,47,0.035)] sm:rounded-2xl">
+      <section className="admin-panel overflow-hidden">
         <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4 md:px-6">
           <div>
-            <h2 className="font-serif text-lg sm:text-xl">Sales by date</h2>
-            <p className="mt-1 text-[11px] text-[#928a92] sm:text-xs">Choose any date to see its complete breakdown.</p>
+            <h2 className="admin-panel-title">Sales by date</h2>
+            <p className="admin-panel-description">Choose any date to see its complete breakdown.</p>
           </div>
           <div className="relative w-full sm:w-auto">
             <input
@@ -295,10 +311,10 @@ export default function Sales() {
 
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#160d18]/60 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6"
+          className="admin-modal-backdrop"
           onMouseDown={(event) => { if (event.target === event.currentTarget) closeModal(); }}
         >
-          <section role="dialog" aria-modal="true" aria-labelledby="sales-modal-title" className="relative my-auto max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-xl border border-[#eadfe8] bg-[#fffdfa] p-5 shadow-2xl shadow-black/25 sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl sm:p-7">
+          <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="sales-modal-title" className="admin-modal relative p-5 sm:p-6">
             <button type="button" onClick={closeModal} disabled={isSaving} aria-label="Close daily sales form" className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-[#7c737d] transition hover:bg-[#f3eef2] hover:text-plum disabled:opacity-50 sm:right-4 sm:top-4">
               <FiX size={18} />
             </button>
@@ -323,8 +339,8 @@ export default function Sales() {
               {formError && <p role="alert" className="rounded-lg border border-[#f0d8d6] bg-[#fff6f5] px-3.5 py-3 text-xs text-[#a13d39]">{formError}</p>}
 
               <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end sm:gap-3">
-                <button type="button" onClick={closeModal} disabled={isSaving} className="rounded-lg border border-[#e6dfe5] px-4 py-2.5 text-sm font-medium text-[#625a63] transition hover:bg-[#faf8f5] disabled:opacity-50">Cancel</button>
-                <button type="submit" disabled={isSaving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-plum px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#432140] disabled:cursor-wait disabled:opacity-65">
+                <button type="button" onClick={closeModal} disabled={isSaving} className="admin-button-secondary">Cancel</button>
+                <button type="submit" disabled={isSaving} className="admin-button-primary">
                   {isSaving && <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
                   {isSaving ? "Saving daily sales…" : "Save daily sales"}
                 </button>
@@ -346,7 +362,7 @@ function SummaryCard({ label, amount, icon: Icon, accent, loading = false }: {
 }) {
   const colors = { plum: "bg-[#f4edf3] text-plum", gold: "bg-[#f8f3e9] text-[#a07848]" };
   return (
-    <article className="min-w-0 rounded-xl border border-[#ece6df] bg-white p-3.5 shadow-[0_4px_18px_rgba(48,23,47,0.025)] sm:rounded-2xl sm:p-4">
+    <article className="admin-panel min-w-0 p-4">
       <div className="flex items-start justify-between gap-2">
         <p className="text-[10px] font-medium leading-4 text-[#817982] sm:text-xs">{label}</p>
         <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${colors[accent]} sm:h-8 sm:w-8`}><Icon size={14} aria-hidden="true" /></span>
@@ -395,7 +411,7 @@ function SelectedDayCard({ label, amount, hasValue, icon: Icon, expense = false,
   loading?: boolean;
 }) {
   return (
-    <article className="min-w-0 rounded-xl border border-[#f0ece8] bg-[#fffdfa] p-3 sm:rounded-2xl sm:p-4">
+    <article className="admin-panel min-w-0 bg-[#fffdfa] p-3 sm:p-4">
       <div className="flex items-center gap-1.5 text-[10px] text-[#817982] sm:text-xs"><Icon size={13} aria-hidden="true" />{label}</div>
       <p className={`mt-2 flex h-5 items-center text-sm font-semibold sm:text-base ${expense ? "text-[#a54a4a]" : "text-[#332a35]"}`}>{loading ? <FiLoader aria-label="Loading" className="animate-spin text-plum" size={16} /> : hasValue ? formatPrice(amount) : "—"}</p>
     </article>
@@ -414,7 +430,7 @@ function AmountBadge({ amount, visible, kind }: {
     cash: "border-[#cfe4dc] bg-[#eef7f3] text-[#356b57]",
     expense: "border-[#f0d5d2] bg-[#fff2f0] text-[#a54a4a]",
   };
-  return <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-1 text-[10px] font-medium ${styles[kind]}`}>{formatPrice(amount)}</span>;
+  return <span className={`admin-badge whitespace-nowrap ${styles[kind]}`}>{formatPrice(amount)}</span>;
 }
 
 function LoadingSpinner({ label }: { label: string }) {
@@ -436,7 +452,7 @@ function AmountField({ label, id, value, onChange, hint }: {
   return (
     <div>
       <label htmlFor={id} className="mb-1.5 block text-xs font-semibold text-[#514852]">{label} (₹)</label>
-      <input id={id} type="number" min="0" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} placeholder="0.00" className={fieldClassName} />
+      <input id={id} type="number" min="0" step="1" value={value} onChange={(event) => onChange(event.target.value)} placeholder="0" className={fieldClassName} />
       {hint && <p className="mt-1 text-[10px] text-[#928a92]">{hint}</p>}
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiAward, FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
+import { FiActivity, FiAward, FiDollarSign, FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
 import { getPurchases, getSalesTransactions } from "../../../utils/adminApi";
 import type { Purchase, SalesTransaction } from "../../../utils/adminApi";
 import SalesTrendChart from "./SalesTrendChart";
@@ -10,7 +10,7 @@ function formatPrice(amount: number) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(amount);
 }
 
@@ -82,10 +82,12 @@ export default function Overview({ adminName }: { adminName: string }) {
 
   return (
     <div id="overview">
-      <div className="mb-5 sm:mb-6">
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold sm:text-xs">Shop overview</p>
-        <h1 className="font-serif text-[28px] leading-tight sm:text-3xl lg:text-4xl">Welcome back, {adminName}</h1>
-        <p className="mt-1.5 text-[13px] text-[#817982] sm:text-sm">A clear view of your showroom’s sales and purchasing.</p>
+      <div className="admin-page-header">
+        <div>
+          <p className="admin-page-kicker">Shop overview</p>
+          <h1 className="admin-page-title">Welcome back, {adminName}</h1>
+          <p className="admin-page-description">A clear view of your showroom’s sales and purchasing.</p>
+        </div>
       </div>
 
       {loadError && (
@@ -105,10 +107,10 @@ export default function Overview({ adminName }: { adminName: string }) {
         </div>
       )}
 
-      <section aria-label="All-time shop totals" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
+      <section aria-label="All-time shop totals" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <OverviewCard label="All-time sales" value={salesTotals.total} icon={FiShoppingBag} color="plum" isLoading={isLoading} hasError={Boolean(loadError)} />
-        {/* <OverviewCard label="Online / UPI sales" value={salesTotals.online} icon={FiActivity} color="gold" isLoading={isLoading} hasError={Boolean(loadError)} /> */}
-        {/* <OverviewCard label="Cash sales" value={salesTotals.cash} icon={FiDollarSign} color="green" isLoading={isLoading} hasError={Boolean(loadError)} /> */}
+        <OverviewCard label="Online / UPI" value={salesTotals.online} icon={FiActivity} color="gold" isLoading={isLoading} hasError={Boolean(loadError)} />
+        <OverviewCard label="Cash sales" value={salesTotals.cash} icon={FiDollarSign} color="green" isLoading={isLoading} hasError={Boolean(loadError)} />
         <OverviewCard label="All-time purchasing" value={purchaseTotal} icon={FiShoppingBag} color="rose" isLoading={isLoading} hasError={Boolean(loadError)} />
       </section>
 
@@ -116,9 +118,9 @@ export default function Overview({ adminName }: { adminName: string }) {
         <SalesTrendChart transactions={transactions} isLoading={isLoading} />
       </div>
 
-      <section className="mt-5 overflow-hidden rounded-xl border border-[#ece6df] bg-white shadow-[0_4px_18px_rgba(48,23,47,0.035)] sm:mt-6 sm:rounded-2xl">
-        <div className="flex items-center gap-3 p-4 sm:p-5 md:p-6">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#f8f3e9] text-[#9a733b] sm:h-12 sm:w-12 sm:rounded-2xl"><FiAward size={20} /></span>
+      <section className="admin-panel mt-6 overflow-hidden">
+        <div className="flex items-center gap-3 p-4 sm:p-5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#f8f3e9] text-[#9a733b]"><FiAward size={18} /></span>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a07848]">Top wholesale supplier</p>
             {isLoading ? (
@@ -127,7 +129,7 @@ export default function Overview({ adminName }: { adminName: string }) {
               <p className="mt-1 text-xs text-[#928a92]">Supplier data is unavailable.</p>
             ) : topSupplier ? (
               <>
-                <h2 className="mt-1 truncate font-serif text-lg text-[#332a35] sm:text-xl">{topSupplier.name}</h2>
+                <h2 className="mt-1 truncate text-[15px] font-semibold text-[#332a35]">{topSupplier.name}</h2>
                 <p className="mt-1 text-[11px] text-[#817982]">{topSupplier.purchases} {topSupplier.purchases === 1 ? "purchase" : "purchases"} · {formatPrice(topSupplier.amount)} total spend</p>
               </>
             ) : (
@@ -156,12 +158,12 @@ function OverviewCard({ label, value, icon: Icon, color, isLoading, hasError }: 
   };
 
   return (
-    <article className="min-w-0 rounded-xl border border-[#ece6df] bg-white p-4 shadow-[0_4px_18px_rgba(48,23,47,0.025)] sm:rounded-2xl sm:p-5">
+    <article className="admin-panel min-w-0 p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-medium text-[#817982]">{label}</p>
+        <p className="text-xs font-medium text-[var(--admin-muted)]">{label}</p>
         <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${styles[color]}`}><Icon size={15} /></span>
       </div>
-      <div className="mt-3 flex h-7 items-center text-lg font-semibold tracking-tight text-[#332a35] sm:text-xl">
+      <div className="mt-3 flex h-7 items-center text-lg font-semibold tracking-tight text-[#332a35]">
         {isLoading ? <FiLoader role="status" aria-label={`Loading ${label}`} size={18} className="animate-spin text-plum" /> : hasError ? "—" : formatPrice(value)}
       </div>
     </article>

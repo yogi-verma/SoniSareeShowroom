@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FiBookmark, FiSearch } from "react-icons/fi";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import AdminLoginModal from "../../../admin/component/AdminLoginModal";
 import { getLoggedInAdmin } from "../../../admin/utils/adminApi";
 
@@ -44,14 +44,9 @@ function Navigation({ mobile = false, onAdminClick }: { mobile?: boolean; onAdmi
 }
 
 export default function Header() {
-  const pathname = usePathname();
   const router = useRouter();
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
-
-  useEffect(() => {
-    setIsAdminModalOpen(false);
-  }, [pathname]);
 
   async function handleAdminClick() {
     if (isCheckingAdmin) return;

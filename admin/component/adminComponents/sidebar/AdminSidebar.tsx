@@ -29,8 +29,8 @@ export default function AdminSidebar({ activeSection, onSelectSection }: AdminSi
             aria-current={isActive ? "page" : undefined}
             onClick={() => onSelectSection(id)}
             className={mobile
-              ? `flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-2 text-[11px] font-medium transition sm:gap-2 sm:rounded-xl sm:px-3 sm:py-2.5 sm:text-xs ${isActive ? "bg-[#f4edf3] text-plum" : "text-[#777078] hover:bg-[#f6f0f5] hover:text-plum"}`
-              : `group flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition ${isActive ? "bg-[#f4edf3] text-plum" : "text-[#777078] hover:bg-[#faf8f5] hover:text-plum"}`}
+              ? `flex min-h-10 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-2 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/40 sm:gap-2 sm:px-3 sm:text-xs ${isActive ? "bg-[#f3ebf2] text-plum" : "text-[#716a73] hover:bg-[#f8f5f8] hover:text-plum"}`
+              : `group flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/40 ${isActive ? "bg-[#f3ebf2] text-plum" : "text-[#716a73] hover:bg-[#faf8f5] hover:text-plum"}`}
           >
             <Icon size={mobile ? 16 : 18} aria-hidden="true" />
             {label}
@@ -43,23 +43,19 @@ export default function AdminSidebar({ activeSection, onSelectSection }: AdminSi
 
   return (
     <>
-      <aside className="hidden w-[250px] shrink-0 flex-col border-r border-[#e9e3dc] bg-white px-5 py-7 lg:flex">
-        <Link href="/" className="mb-12 flex items-center gap-3" aria-label="Soni Saree Showroom home">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-plum font-serif text-xl text-[#e5c3d6]">❋</span>
-          <span className="font-serif text-[15px] leading-tight">Soni Saree<small className="mt-1 block font-sans text-[9px] tracking-[0.17em] text-[#89818a]">SHOWROOM</small></span>
+      <aside className="sticky top-0 hidden h-screen w-[var(--admin-sidebar-width)] shrink-0 flex-col border-r border-[var(--admin-border)] bg-white px-4 py-5 lg:flex">
+        <Link href="/" className="mb-8 flex items-center gap-3 px-1" aria-label="Soni Saree Showroom home">
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-plum font-serif text-lg text-white">❋</span>
+          <span className="font-serif text-[14px] leading-tight">Soni Saree<small className="mt-1 block font-sans text-[9px] tracking-[0.16em] text-[#89818a]">SHOWROOM</small></span>
         </Link>
 
-        <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a39aa2]">Workspace</p>
+        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#928a92]">Workspace</p>
         {sectionLinks()}
 
-        <div className="mt-auto rounded-2xl bg-[#f8f3ed] p-4">
-          <p className="font-serif text-base">A little note</p>
-          <p className="mt-1.5 text-xs leading-5 text-[#777078]">Your storefront is ready for its next beautiful story.</p>
-          <Link href="/" className="mt-3 inline-flex text-xs font-semibold text-plum hover:underline">Visit storefront ↗</Link>
-        </div>
+        <Link href="/" className="mt-auto inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-[#716a73] transition hover:bg-[#faf8f5] hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/40">Visit storefront <span aria-hidden="true">↗</span></Link>
       </aside>
 
-      <div className="border-b border-[#e9e3dc] bg-white px-3 py-2.5 sm:px-4 sm:py-3 lg:hidden">
+      <div className="border-b border-[var(--admin-border)] bg-white px-3 py-2 sm:px-4 lg:hidden">
         {sectionLinks(true)}
       </div>
     </>

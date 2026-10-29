@@ -160,7 +160,6 @@ export default function SalesTrendChart({ transactions, isLoading }: {
   const areaPath = chartPoints.length > 1
     ? `${linePath} L ${chartPoints[chartPoints.length - 1].x} ${top + plotHeight} L ${chartPoints[0].x} ${top + plotHeight} Z`
     : "";
-  const labelEvery = Math.max(1, Math.ceil(points.length / 8));
   const customRangeInvalid = range === "custom" && (!customStart || !customEnd || customStart > customEnd);
   const hasSales = largestValue > 0;
 
@@ -175,13 +174,13 @@ export default function SalesTrendChart({ transactions, isLoading }: {
   }
 
   return (
-    <section className="mb-5 overflow-hidden rounded-2xl border border-[#e9e1e8] bg-white shadow-[0_10px_34px_rgba(48,23,47,0.055)] sm:mb-6">
-      <div className="border-b border-[#f0ece8] px-4 py-4 sm:px-6 sm:py-5">
+    <section className="admin-panel mb-5 overflow-hidden">
+      <div className="border-b border-[var(--admin-border)] px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a07848]">Revenue analytics</p>
-            <h2 className="mt-1 font-serif text-xl text-[#2b202c] sm:text-2xl">Sales performance</h2>
-            <p className="mt-1 text-xs text-[#817982]">Total online and cash sales across the selected period.</p>
+            <p className="admin-page-kicker mb-1">Revenue analytics</p>
+            <h2 className="admin-panel-title text-xl">Sales performance</h2>
+            <p className="admin-panel-description">Total online and cash sales across the selected period.</p>
           </div>
           <div className="flex flex-wrap gap-1.5 rounded-xl bg-[#f7f3f6] p-1.5" role="group" aria-label="Sales chart date range">
             {ranges.map((option) => (
@@ -190,7 +189,7 @@ export default function SalesTrendChart({ transactions, isLoading }: {
                 type="button"
                 aria-pressed={range === option.value}
                 onClick={() => { setRange(option.value); setActiveIndex(null); }}
-                className={`rounded-lg px-3 py-2 text-[10px] font-semibold transition sm:text-[11px] ${range === option.value ? "bg-white text-plum shadow-sm ring-1 ring-black/[0.03]" : "text-[#817982] hover:text-plum"}`}
+                className={`min-h-8 rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/40 ${range === option.value ? "bg-white text-plum shadow-sm ring-1 ring-black/[0.03]" : "text-[#817982] hover:text-plum"}`}
               >
                 {option.label}
               </button>
@@ -295,7 +294,7 @@ function DateControl({ label, value, min, max, onChange }: {
     <label className="block w-full sm:max-w-[190px]">
       <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-[#817982]">{label}</span>
       <span className="relative block">
-        <input type="date" value={value} min={min} max={max} onChange={(event) => onChange(event.target.value)} className="w-full rounded-lg border border-[#e6dfe5] bg-white px-3 py-2.5 pr-9 text-xs text-[#332a35] outline-none focus:border-[#a87c9e] focus:ring-4 focus:ring-[#a87c9e]/10" />
+        <input type="date" value={value} min={min} max={max} onChange={(event) => onChange(event.target.value)} className="admin-field pr-9 text-xs" />
         <FiCalendar size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#817982]" />
       </span>
     </label>

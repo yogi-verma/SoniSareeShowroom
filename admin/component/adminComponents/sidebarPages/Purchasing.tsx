@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { FiArrowLeft, FiCalendar, FiChevronDown, FiDownload, FiLoader, FiMapPin, FiPlus, FiRefreshCw, FiShoppingBag, FiTrash2, FiX } from "react-icons/fi";
 import { createPurchase, getPurchases } from "../../../utils/adminApi";
 import type { Purchase, PurchaseInput } from "../../../utils/adminApi";
+import { useAccessibleDialog } from "../useAccessibleDialog";
 
 const places = ["Charkhi Dardi", "Surat", "Jaipur", "Bhiwani", "Rohtak"];
 const categories = ["shut", "saree", "rajputi poshak"];
@@ -26,7 +27,7 @@ function createEmptyForm() {
   };
 }
 
-const fieldClassName = "w-full rounded-xl border border-[#e6dfe5] bg-white px-3.5 py-3 text-sm text-[#332a35] outline-none transition placeholder:text-[#b0a8b0] hover:border-[#d1c2cf] focus:border-[#a87c9e] focus:ring-4 focus:ring-[#a87c9e]/10";
+const fieldClassName = "admin-field";
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -130,6 +131,7 @@ export default function Purchasing() {
   const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState("");
   const [selectedSupplierKey, setSelectedSupplierKey] = useState<string | null>(null);
+  const dialogRef = useAccessibleDialog(isModalOpen, isSaving, closeModal);
   const subtotal = useMemo(
     () => roundMoney(form.items.reduce((total, item) => total + (Number(item.quantity) || 0) * (Number(item.per_price) || 0), 0)),
     [form.items],
@@ -251,11 +253,11 @@ export default function Purchasing() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-col justify-between gap-3 sm:mb-6 sm:flex-row sm:items-end sm:gap-4">
+      <div className="admin-page-header">
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold sm:mb-2 sm:text-xs sm:tracking-[0.22em]">Stock management</p>
-          <h1 className="font-serif text-[28px] leading-tight sm:text-3xl lg:text-4xl">Purchasing</h1>
-          <p className="mt-1.5 max-w-xl text-[13px] leading-5 text-[#817982] sm:mt-2 sm:text-sm">Keep track of stock purchased from your wholesale suppliers.</p>
+          <p className="admin-page-kicker">Stock management</p>
+          <h1 className="admin-page-title">Purchasing</h1>
+          <p className="admin-page-description">Keep track of stock purchased from your wholesale suppliers.</p>
         </div>
         <button
           type="button"
@@ -264,7 +266,7 @@ export default function Purchasing() {
             setFormError("");
             setIsModalOpen(true);
           }}
-          className="inline-flex w-fit items-center gap-2 rounded-lg bg-plum px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#432140] sm:rounded-xl sm:px-4 sm:py-3 sm:text-sm"
+          className="admin-button-primary"
         >
           <FiPlus size={17} /> Enter Purchasing
         </button>
@@ -276,11 +278,11 @@ export default function Purchasing() {
         </p>
       )}
 
-      <section className="overflow-hidden rounded-xl border border-[#ece6df] bg-white shadow-[0_4px_18px_rgba(48,23,47,0.035)] sm:rounded-2xl">
+      <section className="admin-panel overflow-hidden">
         <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4 md:px-6">
           <div>
-            <h2 className="font-serif text-lg sm:text-xl">Purchase history</h2>
-            <p className="mt-1 text-[11px] text-[#928a92] sm:text-xs">Wholesale stock entries, newest first</p>
+            <h2 className="admin-panel-title">Purchase history</h2>
+            <p className="admin-panel-description">Wholesale stock entries, newest first</p>
           </div>
           <button
             type="button"
@@ -326,7 +328,7 @@ export default function Purchasing() {
             ))}
           </div>
           <div className="hidden overflow-x-auto border-t border-[#f0ece8] sm:block">
-            <table className="w-full min-w-[780px] text-left text-xs">
+            <table className="admin-table min-w-[780px]">
               <thead className="bg-[#fcfbf9] text-[10px] uppercase tracking-[0.12em] text-[#968d96]">
                 <tr>
                   <th className="px-6 py-3 font-medium">Company</th>
@@ -355,11 +357,11 @@ export default function Purchasing() {
         )}
       </section>
 
-      <section className="mt-5 overflow-hidden rounded-xl border border-[#ece6df] bg-white p-4 shadow-[0_4px_18px_rgba(48,23,47,0.035)] sm:mt-6 sm:rounded-2xl sm:p-5 md:p-6">
+      <section className="admin-panel mt-5 overflow-hidden p-4 sm:mt-6 sm:p-5">
         <div className="mb-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">Supplier insights</p>
-          <h2 className="mt-1 font-serif text-lg sm:text-xl">Purchase share by company</h2>
-          <p className="mt-1 text-[11px] text-[#928a92] sm:text-xs">Each slice shows that company’s share of total purchasing spend.</p>
+          <p className="admin-page-kicker mb-1">Supplier insights</p>
+          <h2 className="admin-panel-title">Purchase share by company</h2>
+          <p className="admin-panel-description">Each slice shows that company’s share of total purchasing spend.</p>
         </div>
         {isLoading ? (
           <LoadingSpinner label="Loading supplier chart" />
@@ -372,18 +374,18 @@ export default function Purchasing() {
 
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#160d18]/60 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6"
+          className="admin-modal-backdrop"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeModal();
           }}
         >
-          <section role="dialog" aria-modal="true" aria-labelledby="purchase-modal-title" className="relative my-auto max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-xl border border-[#eadfe8] bg-[#fffdfa] p-5 shadow-2xl shadow-black/25 sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl sm:p-8">
+          <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="purchase-modal-title" className="admin-modal relative p-5 sm:p-6">
             <button type="button" onClick={closeModal} disabled={isSaving} aria-label="Close purchasing form" className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full text-[#7c737d] transition hover:bg-[#f3eef2] hover:text-plum disabled:opacity-50">
               <FiX size={18} />
             </button>
 
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a07848]">Wholesale stock</p>
-            <h2 id="purchase-modal-title" className="mt-2 font-serif text-2xl text-[#2b202c]">Enter a purchase</h2>
+            <h2 id="purchase-modal-title" className="mt-2 font-serif text-xl font-medium text-[#2b202c] sm:text-2xl">Enter a purchase</h2>
             <p className="mt-1 text-sm text-[#817982]">Add the supplier and stock purchase details below.</p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -509,8 +511,8 @@ export default function Purchasing() {
               {formError && <p role="alert" className="rounded-lg border border-[#f0d8d6] bg-[#fff6f5] px-3.5 py-3 text-xs text-[#a13d39]">{formError}</p>}
 
               <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                <button type="button" onClick={closeModal} disabled={isSaving} className="rounded-lg border border-[#e6dfe5] px-4 py-3 text-sm font-medium text-[#625a63] transition hover:bg-[#faf8f5] disabled:opacity-50">Cancel</button>
-                <button type="submit" disabled={isSaving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-plum px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#432140] disabled:cursor-wait disabled:opacity-65">
+                <button type="button" onClick={closeModal} disabled={isSaving} className="admin-button-secondary">Cancel</button>
+                <button type="submit" disabled={isSaving} className="admin-button-primary">
                   {isSaving && <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
                   {isSaving ? "Saving purchase…" : "Save purchase"}
                 </button>
@@ -525,7 +527,7 @@ export default function Purchasing() {
 
 function CategoryBadge({ category }: { category: string }) {
   return (
-    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium capitalize ${categoryStyle(category)}`}>
+    <span className={`admin-badge capitalize ${categoryStyle(category)}`}>
       {category}
     </span>
   );
@@ -617,7 +619,7 @@ function SupplierPurchasesView({ companyName, purchases, onBack }: {
 
       <div className="mb-5 sm:mb-6">
         <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold sm:text-xs">Supplier purchase history</p>
-        <h1 className="break-words font-serif text-[26px] leading-tight text-[#29232b] sm:text-3xl lg:text-4xl">{companyName}</h1>
+        <h1 className="admin-page-title break-words">{companyName}</h1>
         <p className="mt-1.5 text-[13px] text-[#817982] sm:text-sm">Purchases from this supplier, newest first.</p>
       </div>
 
@@ -646,7 +648,7 @@ function SupplierPurchasesView({ companyName, purchases, onBack }: {
         ) : (
           <div className="grid gap-4 border-t border-[#f0ece8] bg-[#fcfbf9] p-3 sm:p-5">
             {purchases.map((purchase) => (
-              <article key={purchase._id} className="mx-auto w-full max-w-4xl rounded-xl border border-[#e9e1d8] bg-white p-4 shadow-[0_3px_12px_rgba(48,23,47,0.035)] sm:rounded-2xl sm:p-6">
+              <article key={purchase._id} className="admin-panel mx-auto w-full max-w-4xl p-4 sm:p-6">
                 <div className="flex flex-col gap-3 border-b border-[#f0ece8] pb-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a07848]">Supplier invoice · #{purchase._id.slice(-8).toUpperCase()}</p>
