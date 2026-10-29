@@ -51,7 +51,7 @@ export function createAdmin(name: string, password: string) {
 }
 
 export function getLoggedInAdmin() {
-  return sendAdminRequest<{ loggedIn: boolean; admin: Admin }>("/loggedinadmin", { method: "GET" });
+  return sendAdminRequest<{ loggedIn: boolean; admin: Admin }>("/api/admin/session", { method: "GET" });
 }
 
 export function logoutAdmin() {

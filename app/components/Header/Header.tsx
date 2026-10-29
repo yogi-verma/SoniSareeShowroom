@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiBookmark, FiSearch } from "react-icons/fi";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import AdminLoginModal from "../../../admin/component/AdminLoginModal";
+import { getLoggedInAdmin } from "../../../admin/utils/adminApi";
 
 const navigation = [
   { label: "Home", href: "/" },
@@ -42,7 +44,28 @@ function Navigation({ mobile = false, onAdminClick }: { mobile?: boolean; onAdmi
 }
 
 export default function Header() {
+  const pathname = usePathname();
+  const router = useRouter();
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
+
+  useEffect(() => {
+    setIsAdminModalOpen(false);
+  }, [pathname]);
+
+  async function handleAdminClick() {
+    if (isCheckingAdmin) return;
+    setIsCheckingAdmin(true);
+
+    try {
+      await getLoggedInAdmin();
+      router.push("/admin/sonisaree");
+    } catch {
+      setIsAdminModalOpen(true);
+    } finally {
+      setIsCheckingAdmin(false);
+    }
+  }
 
   return (
     <header className="absolute inset-x-0 top-0 z-50 bg-gradient-to-b from-black/40 via-black/15 to-transparent text-white">
@@ -57,7 +80,7 @@ export default function Header() {
           </span>
         </Link>
 
-        <Navigation onAdminClick={() => setIsAdminModalOpen(true)} />
+        <Navigation onAdminClick={handleAdminClick} />
 
         <div className="flex items-center gap-2 sm:gap-3">
           <button
@@ -79,7 +102,7 @@ export default function Header() {
           </a>
         </div>
       </div>
-      <Navigation mobile onAdminClick={() => setIsAdminModalOpen(true)} />
+      <Navigation mobile onAdminClick={handleAdminClick} />
       <AdminLoginModal open={isAdminModalOpen} onClose={() => setIsAdminModalOpen(false)} />
     </header>
   );

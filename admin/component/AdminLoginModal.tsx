@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { FiArrowRight, FiLock, FiShield, FiX } from "react-icons/fi";
+import { FiArrowRight, FiLoader, FiLock, FiShield, FiX } from "react-icons/fi";
 import { loginAdmin } from "../utils/adminApi";
 
 type AdminLoginModalProps = {
@@ -16,17 +16,28 @@ export default function AdminLoginModal({ open, onClose }: AdminLoginModalProps)
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const isBusy = isSubmitting || isRedirecting;
+
+  useEffect(() => {
+    if (open) return;
+
+    setPassword("");
+    setError("");
+    setIsSubmitting(false);
+    setIsRedirecting(false);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !isSubmitting) onClose();
+      if (event.key === "Escape" && !isBusy) onClose();
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSubmitting, onClose, open]);
+  }, [isBusy, onClose, open]);
 
   if (!open) return null;
 
@@ -38,9 +49,10 @@ export default function AdminLoginModal({ open, onClose }: AdminLoginModalProps)
     try {
       await loginAdmin(password);
       setPassword("");
-      onClose();
+      setIsRedirecting(true);
       router.push("/admin/sonisaree");
     } catch (requestError) {
+      setIsRedirecting(false);
       setPassword("");
       const status = requestError instanceof Error
         ? (requestError as Error & { status?: number }).status
@@ -56,7 +68,7 @@ export default function AdminLoginModal({ open, onClose }: AdminLoginModalProps)
   }
 
   function closeModal() {
-    if (isSubmitting) return;
+    if (isBusy) return;
     setPassword("");
     setError("");
     onClose();
@@ -111,7 +123,7 @@ export default function AdminLoginModal({ open, onClose }: AdminLoginModalProps)
           <button
             type="button"
             onClick={closeModal}
-            disabled={isSubmitting}
+            disabled={isBusy}
             aria-label="Close admin sign in"
             className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-full text-[#7c737d] transition hover:bg-[#f3eef2] hover:text-plum disabled:opacity-50 sm:right-6 sm:top-6"
           >
@@ -162,11 +174,20 @@ export default function AdminLoginModal({ open, onClose }: AdminLoginModalProps)
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isBusy}
               className="group flex w-full items-center justify-center gap-2 rounded-xl bg-plum px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-plum/15 transition hover:-translate-y-0.5 hover:bg-[#432140] hover:shadow-plum/25 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-65"
             >
-              {isSubmitting ? "Verifying access…" : "Continue to dashboard"}
-              {!isSubmitting && <FiArrowRight size={16} className="transition-transform group-hover:translate-x-1" />}
+              {isBusy ? (
+                <>
+                  <FiLoader size={16} className="animate-spin" aria-hidden="true" />
+                  {isRedirecting ? "Opening your dashboard…" : "Verifying access…"}
+                </>
+              ) : (
+                <>
+                  Continue to dashboard
+                  <FiArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                </>
+              )}
             </button>
           </form>
 
