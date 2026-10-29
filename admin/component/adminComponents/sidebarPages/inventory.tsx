@@ -56,6 +56,94 @@ function titleCase(value: string) {
 
 const fieldClass = "admin-field";
 
+type InventoryDropdownOption = { value: string; label: string };
+
+function InventoryDropdown({
+  id,
+  label,
+  value,
+  placeholder,
+  options,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  options: InventoryDropdownOption[];
+  onChange: (value: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setIsOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const selectedOption = options.find((option) => option.value === value);
+
+  return (
+    <div ref={rootRef} className="relative w-full">
+      <button
+        ref={triggerRef}
+        id={id}
+        type="button"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((open) => !open)}
+        className={`flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-[var(--admin-border-strong)] bg-white px-3 text-left text-sm shadow-sm transition hover:border-[#b99bb5] hover:bg-[#fdfbfd] focus-visible:border-[#9b7294] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#401d3c]/10 ${selectedOption ? "text-[var(--admin-charcoal)]" : "text-[#928a92]"}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? placeholder}</span>
+        <FiChevronDown size={16} aria-hidden="true" className={`shrink-0 text-[#817982] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+      {isOpen && (
+        <div role="menu" aria-label={label} className="absolute left-0 top-full z-50 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-[var(--admin-border)] bg-white p-1.5 shadow-[0_12px_32px_rgba(41,35,43,0.18)]">
+          {options.map((option) => {
+            const isSelected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={isSelected}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                  triggerRef.current?.focus();
+                }}
+                className={`flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-xs transition ${isSelected ? "bg-[#f3ebf2] font-semibold text-plum" : "text-[#5f5661] hover:bg-[#faf8f5] hover:text-plum"}`}
+              >
+                <span className="truncate">{option.label}</span>
+                {isSelected && <FiCheck size={14} aria-hidden="true" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Inventory() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,11 +155,8 @@ export default function Inventory() {
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ProductType | "all">("all");
-  const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [photoPreview, setPhotoPreview] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const typeMenuRef = useRef<HTMLDivElement>(null);
-  const typeMenuButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useAccessibleDialog(isModalOpen, isSaving, closeModal);
 
   const loadProducts = useCallback(async () => {
@@ -115,30 +200,6 @@ export default function Inventory() {
     const timeoutId = window.setTimeout(() => setNotice(""), 3000);
     return () => window.clearTimeout(timeoutId);
   }, [notice]);
-
-  useEffect(() => {
-    if (!isTypeMenuOpen) return;
-
-    function handlePointerDown(event: PointerEvent) {
-      if (event.target instanceof Node && !typeMenuRef.current?.contains(event.target)) {
-        setIsTypeMenuOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsTypeMenuOpen(false);
-        typeMenuButtonRef.current?.focus();
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isTypeMenuOpen]);
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase();
@@ -234,43 +295,15 @@ export default function Inventory() {
           <FiSearch size={15} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-subtle)]" />
           <input value={search} onChange={(event) => setSearch(event.target.value)} style={{ paddingLeft: "2.5rem" }} className={`${fieldClass} text-xs sm:text-sm`} placeholder="Search products" />
         </label>
-        <div ref={typeMenuRef} className="relative w-[clamp(7.25rem,30vw,13rem)] shrink-0">
-          <button
-            ref={typeMenuButtonRef}
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded={isTypeMenuOpen}
-            aria-label="Filter products by type"
-            onClick={() => setIsTypeMenuOpen((isOpen) => !isOpen)}
-            className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-[var(--admin-border-strong)] bg-white px-2.5 text-left text-[11px] font-medium text-[var(--admin-charcoal)] shadow-sm transition hover:border-[#b99bb5] hover:bg-[#fdfbfd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/25 sm:px-3 sm:text-sm"
-          >
-            <span className="truncate">{typeFilter === "all" ? "All types" : titleCase(typeFilter)}</span>
-            <FiChevronDown size={15} aria-hidden="true" className={`shrink-0 text-[var(--admin-muted)] transition-transform ${isTypeMenuOpen ? "rotate-180" : ""}`} />
-          </button>
-          {isTypeMenuOpen && (
-            <div role="menu" aria-label="Product type" className="absolute right-0 top-full z-30 mt-2 w-max min-w-[11rem] overflow-hidden rounded-xl border border-[var(--admin-border)] bg-white p-1.5 shadow-[0_12px_32px_rgba(41,35,43,0.16)]">
-              {[{ value: "all" as const, label: "All types" }, ...productTypes.map((type) => ({ value: type, label: titleCase(type) }))].map((option) => {
-                const isSelected = typeFilter === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={isSelected}
-                    onClick={() => {
-                      setTypeFilter(option.value);
-                      setIsTypeMenuOpen(false);
-                      typeMenuButtonRef.current?.focus();
-                    }}
-                    className={`flex min-h-9 w-full items-center justify-between gap-4 rounded-lg px-3 text-left text-xs transition ${isSelected ? "bg-[#f3ebf2] font-semibold text-plum" : "text-[#5f5661] hover:bg-[#faf8f5] hover:text-plum"}`}
-                  >
-                    {option.label}
-                    {isSelected && <FiCheck size={14} aria-hidden="true" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+        <div className="w-[clamp(7.25rem,30vw,13rem)] shrink-0">
+          <InventoryDropdown
+            id="inventory-type-filter"
+            label="Filter products by type"
+            value={typeFilter}
+            placeholder="All types"
+            options={[{ value: "all", label: "All types" }, ...productTypes.map((type) => ({ value: type, label: titleCase(type) }))]}
+            onChange={(value) => setTypeFilter(value as ProductType | "all")}
+          />
         </div>
         <button type="button" onClick={() => { resetForm(); setFormError(""); setIsModalOpen(true); }} aria-label="Add product" title="Add product" className="admin-button-primary h-10 w-10 shrink-0 px-0 sm:w-auto sm:px-4">
           <FiPlus size={17} aria-hidden="true" /><span className="hidden sm:inline">Add product</span>
@@ -307,10 +340,10 @@ export default function Inventory() {
                   <img src={product.photo.url} alt={product.name} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
                   <span className="absolute left-1.5 top-1.5 rounded-full border border-white/70 bg-white/90 px-2 py-0.5 text-[8px] font-semibold capitalize text-[#514852] shadow-sm sm:left-2 sm:top-2 sm:text-[9px]">{product.productType}</span>
                 </div>
-                <div className="p-2 sm:p-2.5">
+                <div className="pt-2 sm:pt-2.5 px-2 sm:px-2.5">
                   <h3 className="line-clamp-2 min-h-6 text-[11px] font-semibold leading-4 text-[var(--admin-charcoal)] sm:text-xs" title={product.name}>{product.name}</h3>
-                  <p className="truncate text-[9px] text-[var(--admin-subtle)]">{product.category}</p>
-                  <div className=" flex items-center justify-between gap-1 border-t border-[#f0ece8] pt-2">
+                  <p className="truncate text-[9px] mb-1 text-[var(--admin-subtle)]">{product.category}</p>
+                  <div className=" flex items-center justify-between gap-1 py-1">
                     <span className="truncate font-serif text-xs text-plum sm:text-sm">{formatPrice(product.price)}</span>
                     <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-semibold ${product.stock === 0 ? "bg-[#fff0ef] text-[#a13d39]" : product.stock <= 5 ? "bg-[#fbf3e3] text-[#8a682e]" : "bg-[#edf6f1] text-[#356b57]"}`}>
                       {product.stock === 0 ? "Out" : `Qty ${product.stock}`}
@@ -332,8 +365,8 @@ export default function Inventory() {
 
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label><span className="admin-field-label">Product type <span className="text-[#a13d39]">*</span></span><select required value={form.productType} onChange={(event) => setForm((current) => ({ ...current, productType: event.target.value as ProductType | "" }))} className={fieldClass}><option value="" disabled>Select type</option>{productTypes.map((type) => <option key={type} value={type}>{titleCase(type)}</option>)}</select></label>
-                <label><span className="admin-field-label">Category <span className="text-[#a13d39]">*</span></span><select required value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value as ProductCategory | "" }))} className={fieldClass}><option value="" disabled>Select category</option>{productCategories.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+                <div><label htmlFor="inventory-product-type" className="admin-field-label">Product type <span className="text-[#a13d39]">*</span></label><InventoryDropdown id="inventory-product-type" label="Product type" value={form.productType} placeholder="Select type" options={productTypes.map((type) => ({ value: type, label: titleCase(type) }))} onChange={(value) => setForm((current) => ({ ...current, productType: value as ProductType }))} /></div>
+                <div><label htmlFor="inventory-product-category" className="admin-field-label">Category <span className="text-[#a13d39]">*</span></label><InventoryDropdown id="inventory-product-category" label="Category" value={form.category} placeholder="Select category" options={productCategories.map((category) => ({ value: category, label: category }))} onChange={(value) => setForm((current) => ({ ...current, category: value as ProductCategory }))} /></div>
               </div>
               <label className="block"><span className="admin-field-label">Product name <span className="text-[#a13d39]">*</span></span><input required maxLength={120} value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className={fieldClass} placeholder="e.g. Rose gold woven silk saree" /></label>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
