@@ -76,7 +76,7 @@ async function sendAdminRequest<T>(path: string, options: AdminRequestOptions): 
 }
 
 export function loginAdmin(password: string) {
-  return sendAdminRequest<AdminAuthResponse>("/login", { method: "POST", body: { password } });
+  return sendAdminRequest<AdminAuthResponse>("/api/admin/login", { method: "POST", body: { password } });
 }
 
 export function createAdmin(name: string, password: string) {
