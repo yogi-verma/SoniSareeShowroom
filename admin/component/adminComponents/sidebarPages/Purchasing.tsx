@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { FiArrowLeft, FiCalendar, FiChevronDown, FiDownload, FiLoader, FiMapPin, FiPlus, FiRefreshCw, FiShoppingBag, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCheck, FiChevronDown, FiDownload, FiLoader, FiMapPin, FiPlus, FiRefreshCw, FiShoppingBag, FiTrash2, FiX } from "react-icons/fi";
 import { addPurchasePayment, createPurchase, getPurchases } from "../../../utils/adminApi";
 import type { Purchase, PurchaseInput, PurchasePaymentMethod } from "../../../utils/adminApi";
 import { useAccessibleDialog } from "../useAccessibleDialog";
@@ -10,6 +10,101 @@ import PendingSupplierPayments from "./PendingSupplierPayments";
 
 const places = ["Charkhi Dardi", "Surat", "Jaipur", "Bhiwani", "Rohtak"];
 const categories = ["shut", "saree", "rajputi poshak"];
+const paymentMethodOptions = [
+  { value: "cash", label: "Cash" },
+  { value: "online", label: "Online / UPI" },
+  { value: "cheque", label: "Cheque" },
+];
+
+type DropdownOption = { value: string; label: string };
+
+function PurchaseDropdown({
+  id,
+  label,
+  value,
+  placeholder,
+  options,
+  onChange,
+  openUpwards = false,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  openUpwards?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setIsOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const selectedOption = options.find((option) => option.value === value);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        ref={triggerRef}
+        id={id}
+        type="button"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+        className={`flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-[var(--admin-border-strong)] bg-white px-3 text-left text-sm text-[var(--admin-charcoal)] shadow-sm transition hover:border-[#b99bb5] hover:bg-[#fdfbfd] focus-visible:border-[#9b7294] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#401d3c]/10 ${!selectedOption ? "text-[#928a92]" : ""}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? placeholder}</span>
+        <FiChevronDown size={16} aria-hidden="true" className={`shrink-0 text-[#817982] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+      {isOpen && (
+        <div role="menu" aria-label={label} className={`absolute left-0 z-50 w-full min-w-max overflow-hidden rounded-xl border border-[var(--admin-border)] bg-white p-1.5 shadow-[0_12px_32px_rgba(41,35,43,0.18)] ${openUpwards ? "bottom-full mb-2" : "top-full mt-2"}`}>
+          {options.map((option) => {
+            const isSelected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={isSelected}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                  triggerRef.current?.focus();
+                }}
+                className={`flex min-h-9 w-full items-center justify-between gap-4 rounded-lg px-3 text-left text-xs transition ${isSelected ? "bg-[#f3ebf2] font-semibold text-plum" : "text-[#5f5661] hover:bg-[#faf8f5] hover:text-plum"}`}
+              >
+                {option.label}
+                {isSelected && <FiCheck size={14} aria-hidden="true" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function createEmptyItem(id: string) {
   return { id, name: "", description: "", quantity: "1", per_price: "" };
@@ -255,6 +350,10 @@ export default function Purchasing() {
     event.preventDefault();
     setFormError("");
     setNotice("");
+    if (!form.place || !form.category) {
+      setFormError("Select a purchase place and category to continue.");
+      return;
+    }
     setIsSaving(true);
 
     const purchase: PurchaseInput = {
@@ -493,11 +592,15 @@ export default function Purchasing() {
               </label>
               <div>
                 <label htmlFor="purchase-payment-method-now" className="admin-field-label">Pay via</label>
-                <select id="purchase-payment-method-now" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PurchasePaymentMethod)} className="admin-field">
-                  <option value="cash">Cash</option>
-                  <option value="online">Online / UPI</option>
-                  <option value="cheque">Cheque</option>
-                </select>
+                <PurchaseDropdown
+                  id="purchase-payment-method-now"
+                  label="Payment method"
+                  value={paymentMethod}
+                  placeholder="Choose a payment method"
+                  options={paymentMethodOptions}
+                  onChange={(value) => setPaymentMethod(value as PurchasePaymentMethod)}
+                  openUpwards
+                />
               </div>
               <p className="flex justify-between rounded-lg bg-[#f8f5f1] px-3 py-2.5 text-xs"><span className="text-[#716a73]">Balance after this payment</span><strong className="text-[#332a35]">{formatPrice(remainingAfterPayment)}</strong></p>
               {paymentError && <p role="alert" className="rounded-lg border border-[#f0d8d6] bg-[#fff6f5] px-3 py-2.5 text-xs text-[#a13d39]">{paymentError}</p>}
@@ -538,23 +641,25 @@ export default function Purchasing() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="purchase-place" className="mb-1.5 block text-xs font-semibold text-[#514852]">Place <span className="text-red-600">*</span></label>
-                  <div className="relative">
-                    <select id="purchase-place" name="place" required value={form.place} onChange={(event) => setForm({ ...form, place: event.target.value })} className={`${fieldClassName} appearance-none pr-10`}>
-                      <option value="" disabled>Select a place</option>
-                      {places.map((place) => <option key={place} value={place}>{place}</option>)}
-                    </select>
-                    <FiChevronDown aria-hidden="true" size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#817982]" />
-                  </div>
+                  <PurchaseDropdown
+                    id="purchase-place"
+                    label="Purchase place"
+                    value={form.place}
+                    placeholder="Select a place"
+                    options={places.map((place) => ({ value: place, label: place }))}
+                    onChange={(value) => setForm({ ...form, place: value })}
+                  />
                 </div>
                 <div>
                   <label htmlFor="purchase-category" className="mb-1.5 block text-xs font-semibold text-[#514852]">Category <span className="text-red-600">*</span></label>
-                  <div className="relative">
-                    <select id="purchase-category" name="category" required value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} className={`${fieldClassName} appearance-none pr-10`}>
-                      <option value="" disabled>Select a category</option>
-                      {categories.map((category) => <option key={category} value={category}>{category.replace(/\b\w/g, (letter) => letter.toUpperCase())}</option>)}
-                    </select>
-                    <FiChevronDown aria-hidden="true" size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#817982]" />
-                  </div>
+                  <PurchaseDropdown
+                    id="purchase-category"
+                    label="Purchase category"
+                    value={form.category}
+                    placeholder="Select a category"
+                    options={categories.map((category) => ({ value: category, label: category.replace(/\b\w/g, (letter) => letter.toUpperCase()) }))}
+                    onChange={(value) => setForm({ ...form, category: value })}
+                  />
                 </div>
               </div>
 
@@ -634,11 +739,16 @@ export default function Purchasing() {
                     Add GST
                   </label>
                   {form.addGst && (
-                    <div className="relative w-[135px]">
-                      <select aria-label="GST percentage" value={form.gstPercent} onChange={(event) => setForm({ ...form, gstPercent: event.target.value })} className={`${fieldClassName} appearance-none py-2.5 pr-9 text-xs`}>
-                        {[5, 12, 18, 28].map((rate) => <option key={rate} value={rate}>{rate}% GST</option>)}
-                      </select>
-                      <FiChevronDown aria-hidden="true" size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#817982]" />
+                    <div className="w-[135px]">
+                      <PurchaseDropdown
+                        id="purchase-gst-rate"
+                        label="GST percentage"
+                        value={form.gstPercent}
+                        placeholder="GST rate"
+                        options={[5, 12, 18, 28].map((rate) => ({ value: String(rate), label: `${rate}% GST` }))}
+                        onChange={(value) => setForm({ ...form, gstPercent: value })}
+                        openUpwards
+                      />
                     </div>
                   )}
                 </div>
@@ -653,11 +763,15 @@ export default function Purchasing() {
                   {initialPaidAmount > 0 && (
                     <div className="grid gap-2 sm:grid-cols-[1fr_145px] sm:items-center">
                       <label htmlFor="purchase-payment-method" className="text-xs font-semibold text-[#514852]">Paid via</label>
-                      <select id="purchase-payment-method" value={form.paymentMethod} onChange={(event) => setForm({ ...form, paymentMethod: event.target.value as PurchasePaymentMethod })} className="admin-field">
-                        <option value="cash">Cash</option>
-                        <option value="online">Online / UPI</option>
-                        <option value="cheque">Cheque</option>
-                      </select>
+                      <PurchaseDropdown
+                        id="purchase-payment-method"
+                        label="Initial payment method"
+                        value={form.paymentMethod}
+                        placeholder="Choose payment method"
+                        options={paymentMethodOptions}
+                        onChange={(value) => setForm({ ...form, paymentMethod: value as PurchasePaymentMethod })}
+                        openUpwards
+                      />
                     </div>
                   )}
                   <div className="flex justify-between gap-3 rounded-lg bg-[#fbfaf8] px-3 py-2.5 text-xs text-[#625a63]">

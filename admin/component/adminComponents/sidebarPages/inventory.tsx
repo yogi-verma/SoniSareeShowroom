@@ -6,8 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   FiCheck,
+  FiChevronDown,
   FiImage,
-  FiLayers,
   FiLoader,
   FiPackage,
   FiPlus,
@@ -67,8 +67,11 @@ export default function Inventory() {
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ProductType | "all">("all");
+  const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [photoPreview, setPhotoPreview] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typeMenuRef = useRef<HTMLDivElement>(null);
+  const typeMenuButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useAccessibleDialog(isModalOpen, isSaving, closeModal);
 
   const loadProducts = useCallback(async () => {
@@ -113,6 +116,30 @@ export default function Inventory() {
     return () => window.clearTimeout(timeoutId);
   }, [notice]);
 
+  useEffect(() => {
+    if (!isTypeMenuOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (event.target instanceof Node && !typeMenuRef.current?.contains(event.target)) {
+        setIsTypeMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsTypeMenuOpen(false);
+        typeMenuButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isTypeMenuOpen]);
+
   const visibleProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase();
     return products.filter((product) => {
@@ -123,12 +150,6 @@ export default function Inventory() {
       return matchesType && matchesSearch;
     });
   }, [products, search, typeFilter]);
-
-  const stockSummary = useMemo(() => ({
-    designs: products.length,
-    totalUnits: products.reduce((total, product) => total + product.stock, 0),
-    lowStock: products.filter((product) => product.stock > 0 && product.stock <= 5).length,
-  }), [products]);
 
   function closeModal() {
     if (isSaving) return;
@@ -199,9 +220,6 @@ export default function Inventory() {
           <h1 id="inventory-title" className="admin-page-title">Inventory</h1>
           <p className="admin-page-description">Keep your sarees, suits, and poshak collections organized.</p>
         </div>
-        <button type="button" onClick={() => { resetForm(); setFormError(""); setIsModalOpen(true); }} className="admin-button-primary w-full sm:w-auto">
-          <FiPlus size={16} aria-hidden="true" /> Add product
-        </button>
       </div>
 
       {notice && (
@@ -210,56 +228,71 @@ export default function Inventory() {
         </p>
       )}
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="admin-panel flex items-center gap-3 p-4">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f3ebf2] text-plum"><FiLayers size={18} /></span>
-          <div><p className="text-[11px] text-[var(--admin-muted)]">Product designs</p><p className="mt-0.5 text-lg font-semibold">{isLoading ? "—" : stockSummary.designs}</p></div>
+      <div className="mb-3 flex min-w-0 items-center gap-2 sm:gap-3">
+        <label className="relative min-w-0 flex-1">
+          <span className="sr-only">Search products</span>
+          <FiSearch size={15} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-subtle)]" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} style={{ paddingLeft: "2.5rem" }} className={`${fieldClass} text-xs sm:text-sm`} placeholder="Search products" />
+        </label>
+        <div ref={typeMenuRef} className="relative w-[clamp(7.25rem,30vw,13rem)] shrink-0">
+          <button
+            ref={typeMenuButtonRef}
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={isTypeMenuOpen}
+            aria-label="Filter products by type"
+            onClick={() => setIsTypeMenuOpen((isOpen) => !isOpen)}
+            className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-[var(--admin-border-strong)] bg-white px-2.5 text-left text-[11px] font-medium text-[var(--admin-charcoal)] shadow-sm transition hover:border-[#b99bb5] hover:bg-[#fdfbfd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/25 sm:px-3 sm:text-sm"
+          >
+            <span className="truncate">{typeFilter === "all" ? "All types" : titleCase(typeFilter)}</span>
+            <FiChevronDown size={15} aria-hidden="true" className={`shrink-0 text-[var(--admin-muted)] transition-transform ${isTypeMenuOpen ? "rotate-180" : ""}`} />
+          </button>
+          {isTypeMenuOpen && (
+            <div role="menu" aria-label="Product type" className="absolute right-0 top-full z-30 mt-2 w-max min-w-[11rem] overflow-hidden rounded-xl border border-[var(--admin-border)] bg-white p-1.5 shadow-[0_12px_32px_rgba(41,35,43,0.16)]">
+              {[{ value: "all" as const, label: "All types" }, ...productTypes.map((type) => ({ value: type, label: titleCase(type) }))].map((option) => {
+                const isSelected = typeFilter === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={isSelected}
+                    onClick={() => {
+                      setTypeFilter(option.value);
+                      setIsTypeMenuOpen(false);
+                      typeMenuButtonRef.current?.focus();
+                    }}
+                    className={`flex min-h-9 w-full items-center justify-between gap-4 rounded-lg px-3 text-left text-xs transition ${isSelected ? "bg-[#f3ebf2] font-semibold text-plum" : "text-[#5f5661] hover:bg-[#faf8f5] hover:text-plum"}`}
+                  >
+                    {option.label}
+                    {isSelected && <FiCheck size={14} aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
-        <div className="admin-panel flex items-center gap-3 p-4">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#eef7f3] text-[#356b57]"><FiPackage size={18} /></span>
-          <div><p className="text-[11px] text-[var(--admin-muted)]">Units in stock</p><p className="mt-0.5 text-lg font-semibold">{isLoading ? "—" : stockSummary.totalUnits}</p></div>
-        </div>
-        <div className="admin-panel flex items-center gap-3 p-4">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fbf5e8] text-[#8a682e]"><FiPackage size={18} aria-hidden="true" /></span>
-          <div><p className="text-[11px] text-[var(--admin-muted)]">Low stock designs</p><p className="mt-0.5 text-lg font-semibold">{isLoading ? "—" : stockSummary.lowStock}</p></div>
-        </div>
+        <button type="button" onClick={() => { resetForm(); setFormError(""); setIsModalOpen(true); }} aria-label="Add product" title="Add product" className="admin-button-primary h-10 w-10 shrink-0 px-0 sm:w-auto sm:px-4">
+          <FiPlus size={17} aria-hidden="true" /><span className="hidden sm:inline">Add product</span>
+        </button>
       </div>
 
-      <div className="admin-panel overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-[var(--admin-border)] p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div>
-            <h2 className="admin-panel-title">Products</h2>
-            <p className="admin-panel-description">Your current collection and available stock</p>
-          </div>
-          <button type="button" onClick={() => void loadProducts()} disabled={isLoading} className="admin-button-secondary self-start sm:self-auto">
-            {isLoading ? <FiLoader size={15} className="animate-spin" /> : <FiRefreshCw size={15} />} Refresh
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-3 border-b border-[var(--admin-border)] p-4 sm:flex-row sm:items-center">
-          <label className="relative min-w-0 flex-1">
-            <span className="sr-only">Search products</span>
-            <FiSearch size={15} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-subtle)]" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} className={`${fieldClass} pl-9`} placeholder="Search by name or category" />
-          </label>
-          <label className="sm:w-52">
-            <span className="sr-only">Filter by product type</span>
-            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as ProductType | "all")} className={fieldClass}>
-              <option value="all">All product types</option>
-              {productTypes.map((type) => <option key={type} value={type}>{titleCase(type)}</option>)}
-            </select>
-          </label>
-        </div>
+      <div className="mb-2 flex items-center justify-between gap-3 px-0.5">
+        <p className="text-[11px] text-[var(--admin-muted)]">{isLoading ? "Loading products…" : `${visibleProducts.length} ${visibleProducts.length === 1 ? "product" : "products"}`}</p>
+        <button type="button" onClick={() => void loadProducts()} disabled={isLoading} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-[11px] font-medium text-[var(--admin-muted)] transition hover:bg-white hover:text-plum disabled:opacity-50">
+          {isLoading ? <FiLoader size={13} className="animate-spin" /> : <FiRefreshCw size={13} />} Refresh
+        </button>
+      </div>
 
         {loadError ? (
-          <div className="p-10 text-center">
+          <div className="admin-panel p-8 text-center">
             <p role="alert" className="text-sm text-[var(--admin-danger)]">{loadError}</p>
             <button type="button" onClick={() => void loadProducts()} className="admin-button-secondary mt-4"><FiRefreshCw size={14} /> Try again</button>
           </div>
         ) : isLoading ? (
-          <div className="grid min-h-64 place-items-center p-8 text-sm text-[var(--admin-muted)]"><span className="inline-flex items-center gap-2"><FiLoader className="animate-spin" /> Loading inventory…</span></div>
+          <div className="grid min-h-48 place-items-center rounded-xl border border-[var(--admin-border)] bg-white p-8 text-sm text-[var(--admin-muted)]"><span className="inline-flex items-center gap-2"><FiLoader className="animate-spin" /> Loading inventory…</span></div>
         ) : visibleProducts.length === 0 ? (
-          <div className="grid min-h-64 place-items-center p-8 text-center">
+          <div className="admin-panel grid min-h-48 place-items-center p-8 text-center">
             <div><span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#f7f3f6] text-plum"><FiPackage size={21} /></span>
               <h3 className="mt-3 font-serif text-lg text-[var(--admin-charcoal)]">{products.length ? "No matching products" : "Your inventory is ready"}</h3>
               <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--admin-muted)]">{products.length ? "Try a different search or product type." : "Add your first design to start keeping track of stock."}</p>
@@ -267,22 +300,20 @@ export default function Inventory() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {visibleProducts.map((product) => (
-              <article key={product._id} className="group overflow-hidden rounded-xl border border-[var(--admin-border)] bg-white transition hover:-translate-y-0.5 hover:shadow-[var(--admin-shadow-panel)]">
+              <article key={product._id} className="group min-w-0 overflow-hidden rounded-lg border border-[var(--admin-border)] bg-white transition hover:-translate-y-0.5 hover:shadow-[var(--admin-shadow-panel)]">
                 <div className="relative aspect-[4/3] overflow-hidden bg-[#f6f2ed]">
                   <img src={product.photo.url} alt={product.name} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
-                  <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[10px] font-semibold capitalize text-[#514852] shadow-sm">{product.productType}</span>
+                  <span className="absolute left-1.5 top-1.5 rounded-full border border-white/70 bg-white/90 px-2 py-0.5 text-[8px] font-semibold capitalize text-[#514852] shadow-sm sm:left-2 sm:top-2 sm:text-[9px]">{product.productType}</span>
                 </div>
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0"><h3 className="truncate text-sm font-semibold text-[var(--admin-charcoal)]" title={product.name}>{product.name}</h3><p className="mt-1 truncate text-xs text-[var(--admin-subtle)]">{product.category}</p></div>
-                    <span className="shrink-0 font-serif text-base text-plum">{formatPrice(product.price)}</span>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between border-t border-[#f0ece8] pt-3">
-                    <span className="text-[11px] text-[var(--admin-muted)]">Available stock</span>
-                    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${product.stock === 0 ? "border-[#efd5d3] bg-[#fff7f6] text-[#a13d39]" : product.stock <= 5 ? "border-[#efdfbc] bg-[#fbf5e8] text-[#8a682e]" : "border-[#cfe4dc] bg-[#eef7f3] text-[#356b57]"}`}>
-                      {product.stock === 0 ? "Out of stock" : `${product.stock} in stock`}
+                <div className="p-2 sm:p-2.5">
+                  <h3 className="line-clamp-2 min-h-6 text-[11px] font-semibold leading-4 text-[var(--admin-charcoal)] sm:text-xs" title={product.name}>{product.name}</h3>
+                  <p className="truncate text-[9px] text-[var(--admin-subtle)]">{product.category}</p>
+                  <div className=" flex items-center justify-between gap-1 border-t border-[#f0ece8] pt-2">
+                    <span className="truncate font-serif text-xs text-plum sm:text-sm">{formatPrice(product.price)}</span>
+                    <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-semibold ${product.stock === 0 ? "bg-[#fff0ef] text-[#a13d39]" : product.stock <= 5 ? "bg-[#fbf3e3] text-[#8a682e]" : "bg-[#edf6f1] text-[#356b57]"}`}>
+                      {product.stock === 0 ? "Out" : `Qty ${product.stock}`}
                     </span>
                   </div>
                 </div>
@@ -290,7 +321,6 @@ export default function Inventory() {
             ))}
           </div>
         )}
-      </div>
 
       {isModalOpen && (
         <div className="admin-modal-backdrop admin-centered-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeModal(); }}>
