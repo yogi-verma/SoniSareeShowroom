@@ -10,18 +10,43 @@ type AdminAuthResponse = {
   admin: Admin;
 };
 
+export type PurchaseItem = {
+  _id?: string;
+  name: string;
+  description: string;
+  quantity: number;
+  per_price: number;
+  total?: number;
+};
+
 export type Purchase = {
   _id: string;
   companyName: string;
   place: string;
   description: string;
   category: string;
+  items?: PurchaseItem[];
+  subtotal?: number;
+  gstPercent?: number;
+  gstAmount?: number;
   total_price: number;
   purchaseDate?: string;
   createdAt: string;
 };
 
-export type PurchaseInput = Omit<Purchase, "_id" | "createdAt" | "purchaseDate"> & { purchaseDate: string };
+export type PurchaseItemInput = Omit<PurchaseItem, "_id" | "total">;
+
+export type PurchaseInput = {
+  companyName: string;
+  place: string;
+  description?: string;
+  category: string;
+  items: PurchaseItemInput[];
+  gstPercent: number;
+  /** Sent for compatibility with older deployed purchase controllers; the current API recalculates this from items and GST. */
+  total_price: number;
+  purchaseDate: string;
+};
 
 export type SalesTransactionType = "online" | "cash" | "expense";
 
@@ -45,7 +70,7 @@ export type DailySalesInput = {
 
 type AdminRequestOptions = {
   method: "GET" | "POST";
-  body?: Record<string, string | number>;
+  body?: Record<string, unknown>;
 };
 
 async function sendAdminRequest<T>(path: string, options: AdminRequestOptions): Promise<T> {
