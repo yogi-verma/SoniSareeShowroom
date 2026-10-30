@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FiBookmark, FiChevronRight, FiLogIn, FiSearch, FiShield, FiUser } from "react-icons/fi";
+import { FiBookmark, FiChevronRight, FiLogIn, FiSearch, FiShield, FiShoppingBag, FiUser } from "react-icons/fi";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminLoginModal from "../../../admin/component/AdminLoginModal";
@@ -39,7 +39,7 @@ function Navigation({ mobile = false }: { mobile?: boolean }) {
 
 export default function Header() {
   const router = useRouter();
-  const { user, isLoading, openSignIn } = useAuth();
+  const { user, isLoading, cartItemCount, openSignIn } = useAuth();
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -112,6 +112,23 @@ export default function Header() {
             <FiBookmark aria-hidden="true" size={17} strokeWidth={1.6} />
             <span className="hidden text-[10px] tracking-wide sm:inline">Wishlist</span>
           </a>
+
+          <button
+            type="button"
+            aria-label={user ? `Open cart, ${cartItemCount} item${cartItemCount === 1 ? "" : "s"}` : "Sign in to open your cart"}
+            title="Cart"
+            onClick={() => {
+              if (!user) {
+                openSignIn();
+                return;
+              }
+              router.push(`/me/${encodeURIComponent(user.email)}#cart`);
+            }}
+            className="relative grid h-10 w-10 place-items-center rounded-full border border-white/20 text-white/90 transition hover:border-[#c994bc] hover:bg-white/10 hover:text-white"
+          >
+            <FiShoppingBag aria-hidden="true" size={17} strokeWidth={1.6} />
+            {cartItemCount > 0 && <span className="absolute -right-1 -top-1 grid min-h-[17px] min-w-[17px] place-items-center rounded-full bg-[#c994bc] px-1 text-[8px] font-bold leading-none text-[#211821]">{cartItemCount > 99 ? "99+" : cartItemCount}</span>}
+          </button>
 
           <div className="relative" ref={profileMenuRef}>
             <button

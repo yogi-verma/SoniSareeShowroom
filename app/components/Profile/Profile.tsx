@@ -11,10 +11,12 @@ import {
   FiLogIn,
   FiLogOut,
   FiMail,
+  FiMinus,
   FiMapPin,
   FiPhone,
   FiPlus,
   FiRefreshCw,
+  FiShoppingBag,
   FiShield,
   FiTrash2,
   FiUser,
@@ -22,6 +24,7 @@ import {
 } from "react-icons/fi";
 import Header from "../Header/Header";
 import { type AuthUser, useAuth } from "../Auth/AuthProvider";
+import { clearCart as clearCartRequest, getCart, removeCartItem as removeCartItemRequest, updateCartItem as updateCartItemRequest, type Cart, type CartItem } from "../../lib/cartApi";
 
 type UserAddress = {
   _id: string;
@@ -39,9 +42,19 @@ type ProfileData = AuthUser & {
   addresses: UserAddress[];
 };
 type AddressDraft = Omit<UserAddress, "_id">;
+type ProfileSection = "personal" | "addresses" | "cart";
 type ApiError = { message?: string };
 
 const authApiUrl = (process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:5000").replace(/\/+$/, "");
+const emptyCart: Cart = { items: [], distinctItems: 0, totalItems: 0, subtotal: 0 };
+
+function formatPrice(price: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(price);
+}
 
 const emptyAddress: AddressDraft = {
   label: "Home",
@@ -132,6 +145,7 @@ export default function Profile({ email }: { email: string }) {
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [notice, setNotice] = useState("");
+  const [activeSection, setActiveSection] = useState<ProfileSection>("personal");
 
   const [phoneDraft, setPhoneDraft] = useState("");
   const [isEditingPhone, setIsEditingPhone] = useState(false);
@@ -145,6 +159,14 @@ export default function Profile({ email }: { email: string }) {
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<UserAddress | null>(null);
   const [isDeletingAddress, setIsDeletingAddress] = useState(false);
+  const [cart, setCart] = useState<Cart>(emptyCart);
+  const [isCartLoading, setIsCartLoading] = useState(true);
+  const [cartError, setCartError] = useState("");
+  const [updatingCartProductId, setUpdatingCartProductId] = useState<string | null>(null);
+  const [cartItemToRemove, setCartItemToRemove] = useState<CartItem | null>(null);
+  const [isRemovingCartItem, setIsRemovingCartItem] = useState(false);
+  const [isClearCartConfirmationOpen, setIsClearCartConfirmationOpen] = useState(false);
+  const [isClearingCart, setIsClearingCart] = useState(false);
 
   const loadProfile = useCallback(async (showLoading = true) => {
     if (showLoading) setIsProfileLoading(true);
@@ -182,10 +204,45 @@ export default function Profile({ email }: { email: string }) {
   }, [isAuthLoading, isOwnProfile, user?.id]);
 
   useEffect(() => {
+    if (isAuthLoading || !isOwnProfile) return;
+    let isActive = true;
+    const refreshCart = () => {
+      getCart()
+        .then((currentCart) => {
+          if (!isActive) return;
+          setCart(currentCart);
+          setCartError("");
+        })
+        .catch((error: unknown) => {
+          if (!isActive) return;
+          setCartError(error instanceof Error ? error.message : "Could not load your cart.");
+        })
+        .finally(() => {
+          if (isActive) setIsCartLoading(false);
+        });
+    };
+    refreshCart();
+    window.addEventListener("soni:cart-updated", refreshCart);
+    return () => {
+      isActive = false;
+      window.removeEventListener("soni:cart-updated", refreshCart);
+    };
+  }, [isAuthLoading, isOwnProfile, user?.id]);
+
+  useEffect(() => {
     if (!notice) return;
     const timeoutId = window.setTimeout(() => setNotice(""), 3200);
     return () => window.clearTimeout(timeoutId);
   }, [notice]);
+
+  useEffect(() => {
+    const syncSectionFromHash = () => {
+      if (window.location.hash === "#cart") setActiveSection("cart");
+    };
+    syncSectionFromHash();
+    window.addEventListener("hashchange", syncSectionFromHash);
+    return () => window.removeEventListener("hashchange", syncSectionFromHash);
+  }, []);
 
   async function savePhone(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -291,6 +348,52 @@ export default function Profile({ email }: { email: string }) {
     }
   }
 
+  async function changeCartQuantity(item: CartItem, quantity: number) {
+    if (quantity < 1 || quantity > 99) return;
+    setCartError("");
+    setUpdatingCartProductId(item.productId);
+    try {
+      const result = await updateCartItemRequest(item.productId, quantity);
+      setCart(result.cart);
+      setNotice("Cart quantity updated.");
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : "Could not update this cart item.");
+    } finally {
+      setUpdatingCartProductId(null);
+    }
+  }
+
+  async function removeCartItem() {
+    if (!cartItemToRemove) return;
+    setIsRemovingCartItem(true);
+    setCartError("");
+    try {
+      const result = await removeCartItemRequest(cartItemToRemove.productId);
+      setCart(result.cart);
+      setCartItemToRemove(null);
+      setNotice("Item removed from your cart.");
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : "Could not remove this item.");
+    } finally {
+      setIsRemovingCartItem(false);
+    }
+  }
+
+  async function confirmClearCart() {
+    setIsClearingCart(true);
+    setCartError("");
+    try {
+      const result = await clearCartRequest();
+      setCart(result.cart);
+      setIsClearCartConfirmationOpen(false);
+      setNotice("Your cart has been cleared.");
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : "Could not clear your cart.");
+    } finally {
+      setIsClearingCart(false);
+    }
+  }
+
   if (isAuthLoading || (isOwnProfile && isProfileLoading)) return <LoadingProfile />;
 
   return (
@@ -299,17 +402,12 @@ export default function Profile({ email }: { email: string }) {
       <section className="relative overflow-hidden bg-gradient-to-br from-[#40233e] via-[#30172f] to-[#211821] pb-25 pt-25 text-white sm:pb-25 sm:pt-25">
         <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-32 h-[380px] w-[380px] rounded-full border border-white/10" />
         <div aria-hidden="true" className="pointer-events-none absolute -right-5 -top-16 h-[250px] w-[250px] rounded-full border border-white/10" />
-        <div className="relative mx-auto max-w-5xl px-5 sm:px-8">
-          <span className="text-[9px] font-semibold tracking-[0.28em] text-[#e4bfd8]">SONI SAREE SHOWROOM</span>
-          <h1 className="mt-3 font-serif text-4xl sm:text-5xl">Your profile</h1>
-          <p className="mt-3 max-w-lg text-sm leading-6 text-white/70">Your contact details and delivery addresses, all in one place.</p>
-        </div>
       </section>
 
       <section className="relative mx-auto -mt-16 max-w-6xl px-4 pb-16 sm:px-8 sm:pb-20">
         {user && isOwnProfile && profile ? (
           <div className="grid items-start gap-5 lg:grid-cols-[290px_minmax(0,1fr)]">
-            <aside className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-6 shadow-[0_16px_44px_rgba(43,27,38,0.11)] sm:p-7">
+            <aside className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.11)] sm:p-7 lg:sticky lg:top-24">
               <div className="flex flex-col items-center text-center">
                 <Avatar user={user} />
                 <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#edf4ee] px-3 py-1 text-[9px] font-semibold tracking-[0.12em] text-[#54745f]">
@@ -318,14 +416,25 @@ export default function Profile({ email }: { email: string }) {
                 <h2 className="mt-3 max-w-full truncate font-serif text-2xl">{user.name}</h2>
                 <p className="mt-1 max-w-full truncate text-xs text-[#777078]">{user.email}</p>
               </div>
-              <div className="my-6 h-px bg-[#eee7e1]" />
-              <div className="flex items-center gap-3 rounded-xl bg-[#f8f3f6] p-3.5">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#684768]"><FiShield size={16} /></span>
-                <div>
-                  <p className="text-xs font-semibold">Secure sign-in</p>
-                  <p className="mt-0.5 text-[10px] text-[#817681]">Connected with Google</p>
-                </div>
-              </div>
+              <nav aria-label="Profile sections" className="mt-5 space-y-1.5">
+                {([
+                  { id: "personal", label: "Personal Details", icon: FiUser },
+                  { id: "addresses", label: "Your Addresses", icon: FiHome },
+                  { id: "cart", label: "Your Cart", icon: FiShoppingBag, count: cart.totalItems },
+                ] as const).map(({ id, label, icon: Icon, ...item }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-current={activeSection === id ? "page" : undefined}
+                    onClick={() => setActiveSection(id)}
+                    className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3.5 text-left text-xs font-semibold transition ${activeSection === id ? "bg-[#30172f] text-white shadow-sm" : "text-[#6f626f] hover:bg-[#f6eef4] hover:text-[#30172f]"}`}
+                  >
+                    <Icon size={16} />
+                    <span className="flex-1">{label}</span>
+                    {"count" in item && item.count > 0 && <span className={`min-w-6 rounded-full px-2 py-1 text-center text-[9px] ${activeSection === id ? "bg-white/15 text-white" : "bg-[#f0e6ef] text-[#684768]"}`}>{item.count}</span>}
+                  </button>
+                ))}
+              </nav>
               <button
                 type="button"
                 onClick={requestLogout}
@@ -343,7 +452,7 @@ export default function Profile({ email }: { email: string }) {
                 </div>
               )}
 
-              <section className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
+              {activeSection === "personal" && <section className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#eee7e1] pb-5">
                   <div>
                     <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">ACCOUNT INFORMATION</span>
@@ -400,9 +509,9 @@ export default function Profile({ email }: { email: string }) {
                     </div>
                   )}
                 </div>
-              </section>
+              </section>}
 
-              <section className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
+              {activeSection === "addresses" && <section className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
                 <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#eee7e1] pb-5">
                   <div>
                     <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">DELIVERY INFORMATION</span>
@@ -446,7 +555,93 @@ export default function Profile({ email }: { email: string }) {
                     <button type="button" onClick={beginCreateAddress} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#cbb8c8] bg-white px-4 text-xs font-semibold text-[#684768] transition hover:bg-[#f6eef4]"><FiPlus size={14} /> Add your first address</button>
                   </div>
                 )}
-              </section>
+              </section>}
+
+              {activeSection === "cart" && <section id="cart" className="scroll-mt-24 rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
+                <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#eee7e1] pb-5">
+                  <div>
+                    <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">YOUR SELECTION</span>
+                    <h2 className="mt-1.5 font-serif text-2xl">Shopping cart</h2>
+                    <p className="mt-1 text-xs text-[#817681]">{cart.totalItems} {cart.totalItems === 1 ? "item" : "items"} across {cart.distinctItems} {cart.distinctItems === 1 ? "product" : "products"}</p>
+                  </div>
+                  {cart.items.length > 0 && (
+                    <button type="button" onClick={() => setIsClearCartConfirmationOpen(true)} className="min-h-9 rounded-lg px-3 text-[11px] font-semibold text-[#9b504d] transition hover:bg-[#fbefed]">Clear cart</button>
+                  )}
+                </div>
+
+                {cartError && (
+                  <div role="alert" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#efd5d3] bg-[#fff9f8] px-3 py-2.5 text-xs text-[#9b3935]">
+                    <span>{cartError}</span>
+                    <button type="button" onClick={() => { setIsCartLoading(true); void getCart().then((currentCart) => { setCart(currentCart); setCartError(""); }).catch((error: unknown) => setCartError(error instanceof Error ? error.message : "Could not load your cart.")).finally(() => setIsCartLoading(false)); }} className="inline-flex items-center gap-1.5 font-semibold"><FiRefreshCw size={13} /> Retry</button>
+                  </div>
+                )}
+
+                {isCartLoading ? (
+                  <div className="mt-5 grid animate-pulse gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+                    <div className="h-28 rounded-xl bg-[#f0e9e4]" />
+                    <div className="h-40 rounded-xl bg-[#f0e9e4]" />
+                  </div>
+                ) : cart.items.length ? (
+                  <div className="mt-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_235px]">
+                    <div className="space-y-3">
+                      {cart.items.map((item) => (
+                        <article key={item.productId} className="rounded-xl border border-[#eee7e1] bg-white p-3.5 sm:p-4">
+                          <div className="flex gap-3 sm:gap-4">
+                            <div className="h-[104px] w-[82px] shrink-0 overflow-hidden rounded-lg bg-[#f0e9e4] sm:h-[118px] sm:w-[94px]">
+                              {item.photoUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={item.photoUrl} alt={item.name} className="h-full w-full object-cover" />
+                              ) : <div className="grid h-full place-items-center text-[#9a778f]"><FiHome size={22} /></div>}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="text-[8px] font-semibold uppercase tracking-[0.15em] text-[#986d8f]">{item.category}</p>
+                                  <h3 className="mt-1 line-clamp-2 font-serif text-base leading-5 text-[#302531] sm:text-lg">{item.name}</h3>
+                                  <p className="mt-1.5 text-xs text-[#777078]">{formatPrice(item.unitPrice)} each</p>
+                                </div>
+                                <p className="shrink-0 text-sm font-semibold text-[#30172f]">{formatPrice(item.lineTotal)}</p>
+                              </div>
+
+                              {!item.isAvailable && (
+                                <p className="mt-2 rounded-md bg-[#fff6e9] px-2.5 py-1.5 text-[10px] leading-4 text-[#8b642f]">
+                                  {item.availableStock > 0 ? `Only ${item.availableStock} currently available. Adjust the quantity to continue.` : "This product is no longer available. Remove it from your cart."}
+                                </p>
+                              )}
+
+                              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                                <div className="inline-flex items-center rounded-lg border border-[#dfd3dd] bg-[#fffdfa]">
+                                  <button type="button" aria-label={`Decrease ${item.name} quantity`} disabled={item.quantity <= 1 || updatingCartProductId === item.productId} onClick={() => void changeCartQuantity(item, item.quantity - 1)} className="grid h-8 w-9 place-items-center text-[#684768] transition hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-40"><FiMinus size={13} /></button>
+                                  <span aria-live="polite" className="min-w-8 text-center text-xs font-semibold">{item.quantity}</span>
+                                  <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={!item.isAvailable || item.quantity >= item.availableStock || item.quantity >= 99 || updatingCartProductId === item.productId} onClick={() => void changeCartQuantity(item, item.quantity + 1)} className="grid h-8 w-9 place-items-center text-[#684768] transition hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-40"><FiPlus size={13} /></button>
+                                </div>
+                                <button type="button" onClick={() => setCartItemToRemove(item)} className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-[10px] font-semibold text-[#9b504d] transition hover:bg-[#fbefed]"><FiTrash2 size={13} /> Remove</button>
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+
+                    <aside className="rounded-xl border border-[#e9dfe8] bg-[#fcf8fb] p-4 sm:p-5 lg:sticky lg:top-5">
+                      <p className="text-[9px] font-semibold tracking-[0.18em] text-[#986d8f]">ORDER SUMMARY</p>
+                      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-[#716a73]">
+                        <span>Subtotal ({cart.totalItems} {cart.totalItems === 1 ? "item" : "items"})</span>
+                        <strong className="text-sm text-[#302531]">{formatPrice(cart.subtotal)}</strong>
+                      </div>
+                      <p className="mt-3 border-t border-[#e9dfe8] pt-3 text-[10px] leading-4 text-[#817681]">Prices and availability are refreshed from the catalog. Cart items are not reserved.</p>
+                      <button type="button" disabled className="mt-4 min-h-11 w-full cursor-not-allowed rounded-lg bg-[#30172f] px-3 text-xs font-semibold text-white opacity-55">Checkout coming soon</button>
+                    </aside>
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-xl border border-dashed border-[#d9cbd4] bg-white px-5 py-10 text-center">
+                    <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#f6eef4] text-[#684768]"><FiMapPin size={19} /></span>
+                    <h3 className="mt-3 font-serif text-xl">Your cart is waiting for something lovely</h3>
+                    <p className="mt-1 text-xs text-[#817681]">Add a saree from the collection and it will appear here.</p>
+                    <button type="button" onClick={() => router.push("/#shop")} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#cbb8c8] bg-white px-4 text-xs font-semibold text-[#684768] transition hover:bg-[#f6eef4]"><FiArrowRight size={14} /> Explore the collection</button>
+                  </div>
+                )}
+              </section>}
             </div>
           </div>
         ) : isOwnProfile && loadError ? (
@@ -527,6 +722,34 @@ export default function Profile({ email }: { email: string }) {
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button type="button" disabled={isDeletingAddress} onClick={() => setPendingDelete(null)} className="min-h-11 rounded-lg border border-[#cbb8c8] text-xs font-semibold text-[#30172f] transition hover:bg-[#f6eef4] disabled:opacity-60">Keep address</button>
               <button type="button" disabled={isDeletingAddress} onClick={() => void deleteAddress()} className="min-h-11 rounded-lg bg-[#8e3936] text-xs font-semibold text-white transition hover:bg-[#762d2b] disabled:opacity-60">{isDeletingAddress ? "Removing…" : "Remove"}</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {cartItemToRemove && (
+        <div className="fixed inset-0 z-[110] grid place-items-center bg-[#211821]/65 px-5 py-8 backdrop-blur-[3px]">
+          <section role="alertdialog" aria-modal="true" aria-labelledby="remove-cart-title" className="w-full max-w-[390px] rounded-2xl border border-[#eadfd8] bg-[#fffdfa] px-7 py-7 text-center text-[#302531] shadow-2xl">
+            <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#fbefed] text-[#9b504d]"><FiTrash2 size={19} /></span>
+            <h2 id="remove-cart-title" className="mt-4 font-serif text-2xl">Remove this item?</h2>
+            <p className="mt-2 text-sm leading-5 text-[#777078]">“{cartItemToRemove.name}” will be removed from your shopping cart.</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button type="button" disabled={isRemovingCartItem} onClick={() => setCartItemToRemove(null)} className="min-h-11 rounded-lg border border-[#cbb8c8] text-xs font-semibold text-[#30172f] transition hover:bg-[#f6eef4] disabled:opacity-60">Keep item</button>
+              <button type="button" disabled={isRemovingCartItem} onClick={() => void removeCartItem()} className="min-h-11 rounded-lg bg-[#8e3936] text-xs font-semibold text-white transition hover:bg-[#762d2b] disabled:opacity-60">{isRemovingCartItem ? "Removing…" : "Remove item"}</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {isClearCartConfirmationOpen && (
+        <div className="fixed inset-0 z-[110] grid place-items-center bg-[#211821]/65 px-5 py-8 backdrop-blur-[3px]">
+          <section role="alertdialog" aria-modal="true" aria-labelledby="clear-cart-title" className="w-full max-w-[390px] rounded-2xl border border-[#eadfd8] bg-[#fffdfa] px-7 py-7 text-center text-[#302531] shadow-2xl">
+            <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#fbefed] text-[#9b504d]"><FiTrash2 size={19} /></span>
+            <h2 id="clear-cart-title" className="mt-4 font-serif text-2xl">Clear your cart?</h2>
+            <p className="mt-2 text-sm leading-5 text-[#777078]">All {cart.totalItems} {cart.totalItems === 1 ? "item" : "items"} will be removed from your cart.</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button type="button" disabled={isClearingCart} onClick={() => setIsClearCartConfirmationOpen(false)} className="min-h-11 rounded-lg border border-[#cbb8c8] text-xs font-semibold text-[#30172f] transition hover:bg-[#f6eef4] disabled:opacity-60">Keep items</button>
+              <button type="button" disabled={isClearingCart} onClick={() => void confirmClearCart()} className="rounded-lg bg-[#8e3936] text-xs font-semibold text-white transition hover:bg-[#762d2b] disabled:opacity-60">{isClearingCart ? "Clearing…" : "Clear cart"}</button>
             </div>
           </section>
         </div>

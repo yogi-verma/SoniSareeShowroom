@@ -14,6 +14,7 @@ export type AuthUser = {
 type AuthContextValue = {
   user: AuthUser | null;
   isLoading: boolean;
+  cartItemCount: number;
   openSignIn: () => void;
   closeSignIn: () => void;
   requestLogout: () => void;
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [cartItemCount, setCartItemCount] = useState(0);
   const [isPromptOpen, setIsPromptOpen] = useState(false);
   const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -68,6 +70,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => controller.abort();
   }, []);
 
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) return;
+    let isActive = true;
+    const refreshCartCount = () => {
+      fetch(`${authApiUrl}/api/users/me/cart`, { credentials: "include", cache: "no-store" })
+        .then(async (response) => {
+          if (!response.ok) return null;
+          return (await response.json()) as { cart?: { totalItems?: number } };
+        })
+        .then((result) => {
+          if (isActive && result) setCartItemCount(result.cart?.totalItems ?? 0);
+        })
+        .catch(() => {
+          if (isActive) setCartItemCount(0);
+        });
+    };
+    const onCartUpdated = () => refreshCartCount();
+    refreshCartCount();
+    window.addEventListener("soni:cart-updated", onCartUpdated);
+    return () => {
+      isActive = false;
+      window.removeEventListener("soni:cart-updated", onCartUpdated);
+    };
+  }, [userId]);
+
   const openSignIn = useCallback(() => setIsPromptOpen(true), []);
   const closeSignIn = useCallback(() => setIsPromptOpen(false), []);
   const requestLogout = useCallback(() => setIsLogoutConfirmationOpen(true), []);
@@ -84,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear local signed-in state even if the backend cannot be reached.
     } finally {
       setUser(null);
+      setCartItemCount(0);
       setIsSigningOut(false);
       setIsLogoutConfirmationOpen(false);
       router.replace("/");
@@ -91,8 +120,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   const contextValue = useMemo(
-    () => ({ user, isLoading, openSignIn, closeSignIn, requestLogout, signInWithGoogle }),
-    [user, isLoading, openSignIn, closeSignIn, requestLogout, signInWithGoogle],
+    () => ({ user, isLoading, cartItemCount, openSignIn, closeSignIn, requestLogout, signInWithGoogle }),
+    [user, isLoading, cartItemCount, openSignIn, closeSignIn, requestLogout, signInWithGoogle],
   );
 
   return (

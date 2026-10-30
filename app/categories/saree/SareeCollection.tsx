@@ -4,6 +4,7 @@ import Image, { type StaticImageData } from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
 import { useAuth } from "../../components/Auth/AuthProvider";
+import { addCartItem } from "../../lib/cartApi";
 
 type SareeProduct = {
   _id: string;
@@ -37,6 +38,7 @@ export default function SareeCollection({ title, editTitle, description, categor
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [addingProductId, setAddingProductId] = useState<string | null>(null);
 
   const loadProducts = useCallback(async () => {
     setIsLoading(true);
@@ -88,7 +90,23 @@ export default function SareeCollection({ title, editTitle, description, categor
       openSignIn();
       return;
     }
-    setMessage("Your bag and checkout are coming soon.");
+    setMessage("Checkout is coming soon. Add the item to your bag to save it.");
+  };
+
+  const addProductToBag = async (product: SareeProduct) => {
+    if (!user) {
+      openSignIn();
+      return;
+    }
+    setAddingProductId(product._id);
+    try {
+      const result = await addCartItem(product._id);
+      setMessage(`${product.name} added to your bag · ${result.cart.totalItems} item${result.cart.totalItems === 1 ? "" : "s"} total`);
+    } catch (addError) {
+      setMessage(addError instanceof Error ? addError.message : "Could not add this item to your bag.");
+    } finally {
+      setAddingProductId(null);
+    }
   };
 
   return (
@@ -147,7 +165,7 @@ export default function SareeCollection({ title, editTitle, description, categor
                   </div>
                   <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3 sm:gap-2 sm:pt-4">
                     <button type="button" disabled={!product.stock} onClick={requestShoppingAction} className="min-h-9 rounded-sm bg-[#30172f] px-1.5 text-[8px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:bg-[#a99ca8] sm:min-h-10 sm:px-2 sm:text-[10px]">Buy now</button>
-                    <button type="button" disabled={!product.stock} onClick={requestShoppingAction} className="min-h-9 rounded-sm border border-[#cbb8c8] px-1.5 text-[8px] font-semibold tracking-wide text-[#30172f] transition hover:border-[#30172f] hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10 sm:px-2 sm:text-[10px]">Add to bag</button>
+                    <button type="button" disabled={!product.stock || addingProductId === product._id} onClick={() => void addProductToBag(product)} className="min-h-9 rounded-sm border border-[#cbb8c8] px-1.5 text-[8px] font-semibold tracking-wide text-[#30172f] transition hover:border-[#30172f] hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10 sm:px-2 sm:text-[10px]">{addingProductId === product._id ? "Adding…" : "Add to bag"}</button>
                   </div>
                 </div>
               </article>

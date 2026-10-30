@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
 import { useAuth } from "../Auth/AuthProvider";
+import { addCartItem } from "../../lib/cartApi";
 
 type Product = {
   _id: string;
@@ -56,6 +57,7 @@ export default function BestSellers() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [addingProductId, setAddingProductId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!message) return;
@@ -68,7 +70,23 @@ export default function BestSellers() {
       openSignIn();
       return;
     }
-    setMessage("Your bag and checkout are coming soon.");
+    setMessage("Checkout is coming soon. Add the item to your cart to save it.");
+  }
+
+  async function handleAddToCart(product: Product) {
+    if (!user) {
+      openSignIn();
+      return;
+    }
+    setAddingProductId(product._id);
+    try {
+      const result = await addCartItem(product._id);
+      setMessage(`${product.name} added to your cart · ${result.cart.totalItems} item${result.cart.totalItems === 1 ? "" : "s"} total`);
+    } catch (addError) {
+      setMessage(addError instanceof Error ? addError.message : "Could not add this item to your cart.");
+    } finally {
+      setAddingProductId(null);
+    }
   }
 
   useEffect(() => {
@@ -195,11 +213,11 @@ export default function BestSellers() {
                 </button>
                 <button
                   type="button"
-                  disabled={!product.stock}
-                  onClick={requestShoppingAction}
+                  disabled={!product.stock || addingProductId === product._id}
+                  onClick={() => void handleAddToCart(product)}
                   className="min-h-10 rounded-sm border border-[#cbb8c8] px-2 text-[9px] font-semibold tracking-wide text-plum transition hover:border-plum hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[10px]"
                 >
-                  Add to Cart
+                  {addingProductId === product._id ? "Adding…" : "Add to Cart"}
                 </button>
               </div>
             </div>
