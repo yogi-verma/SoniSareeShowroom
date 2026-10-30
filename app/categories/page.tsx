@@ -9,15 +9,21 @@ import cottonSaree from "../assets/SareeSection/Cotton-Saree.avif";
 import festivalSaree from "../assets/SareeSection/Festival-Saree.avif";
 import georgetteSaree from "../assets/SareeSection/Georgette-Saree.avif";
 import kanjivaramSaree from "../assets/SareeSection/Kanjivaram-Saree.avif";
+import anarkaliSuit from "../assets/SuitSection/Anarkali-Shut.avif";
+import cottonSuit from "../assets/SuitSection/Cotton-Shut.avif";
+import punjabiSuit from "../assets/SuitSection/Punjabi-Shut.avif";
+import shararaSuit from "../assets/SuitSection/Sharara-Shut.avif";
+import straightSuit from "../assets/SuitSection/Straight-Shut.avif";
+import bridalPoshak from "../assets/RajputiPoshakSection/Bridal-Poshak.avif";
+import gotaPattiPoshak from "../assets/RajputiPoshakSection/GotaPati-Poshak.avif";
+import leheriyaPoshak from "../assets/RajputiPoshakSection/Leheriya-Poshak.avif";
+import traditionalPoshak from "../assets/RajputiPoshakSection/TraditionalRajputi-Poshak.avif";
 
 export const metadata: Metadata = {
   title: "Shop by Category | Soni Saree Showroom",
   description:
     "Explore sarees, women's suits, and traditional Rajputi poshak at Soni Saree Showroom.",
 };
-
-const image = (id: string, width = 580) =>
-  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&q=85`;
 
 const collections = [
   {
@@ -40,12 +46,11 @@ const collections = [
     title: "Suits",
     description: "Beautifully considered sets for celebrations and everyday.",
     items: [
-      { name: "Anarkali Suits", image: "photo-1705921290980-6a644d2828ed" },
-      { name: "Straight Suit Sets", image: "photo-1742800767764-479556a4d8a5" },
-      { name: "Sharara Sets", image: "photo-1705921290980-6a644d2828ed" },
-      { name: "Punjabi Suits", image: "photo-1742800767764-479556a4d8a5" },
-      { name: "Festive Embroidery", image: "photo-1705921290980-6a644d2828ed" },
-      { name: "Cotton Suits", image: "photo-1742800767764-479556a4d8a5" },
+      { name: "Anarkali Suits", image: anarkaliSuit },
+      { name: "Straight Suit Sets", image: straightSuit },
+      { name: "Sharara Sets", image: shararaSuit },
+      { name: "Punjabi Suits", image: punjabiSuit },
+      { name: "Cotton Suits", image: cottonSuit },
     ],
   },
   {
@@ -54,10 +59,10 @@ const collections = [
     title: "Rajputi Poshak",
     description: "Heritage dressing with the color and detail of Rajasthan.",
     items: [
-      { name: "Traditional Poshak", image: "photo-1610030469983-98e550d6193c" },
-      { name: "Leheriya Poshak", image: "photo-1753981031189-27bb7bd1c079" },
-      { name: "Gota Patti Poshak", image: "photo-1717835429626-d6dd3f2c9afb" },
-      { name: "Bridal Poshak", image: "photo-1717835735088-4c821959bdaa" },
+      { name: "Traditional Poshak", image: traditionalPoshak },
+      { name: "Leheriya Poshak", image: leheriyaPoshak },
+      { name: "Gota Patti Poshak", image: gotaPattiPoshak },
+      { name: "Bridal Poshak", image: bridalPoshak },
     ],
   },
 ];
@@ -73,7 +78,6 @@ export default function CategoriesPage() {
           alt="Traditional Indian saree in rich festive colors"
           fill
           sizes="100vw"
-          unoptimized
           className="-z-20 object-cover object-center opacity-45"
         />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#211821]/85 via-[#211821]/75 to-[#211821]/35" />
@@ -136,11 +140,10 @@ export default function CategoriesPage() {
                   className="group relative isolate aspect-[4/4.8] overflow-hidden bg-[#e8ded9]"
                 >
                   <Image
-                    src={typeof item.image === "string" ? image(item.image) : item.image}
+                    src={item.image}
                     alt={item.name}
                     fill
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                    unoptimized
                     className="-z-20 object-cover transition duration-700 group-hover:scale-[1.04]"
                   />
                   <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#211821]/75 via-transparent to-transparent" />
