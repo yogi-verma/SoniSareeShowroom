@@ -46,11 +46,11 @@ const collections = [
     title: "Suits",
     description: "Beautifully considered sets for celebrations and everyday.",
     items: [
-      { name: "Anarkali Suits", image: anarkaliSuit },
-      { name: "Straight Suit Sets", image: straightSuit },
-      { name: "Sharara Sets", image: shararaSuit },
-      { name: "Punjabi Suits", image: punjabiSuit },
-      { name: "Cotton Suits", image: cottonSuit },
+      { name: "Anarkali Suits", image: anarkaliSuit, href: "/category/suit/anarkali-suits" },
+      { name: "Straight Suit Sets", image: straightSuit, href: "/category/suit/straight-suit-sets" },
+      { name: "Sharara Sets", image: shararaSuit, href: "/category/suit/sharara-sets" },
+      { name: "Punjabi Suits", image: punjabiSuit, href: "/category/suit/punjabi-suits" },
+      { name: "Cotton Suits", image: cottonSuit, href: "/category/suit/cotton-suits" },
     ],
   },
   {
@@ -59,10 +59,10 @@ const collections = [
     title: "Rajputi Poshak",
     description: "Heritage dressing with the color and detail of Rajasthan.",
     items: [
-      { name: "Traditional Poshak", image: traditionalPoshak },
-      { name: "Leheriya Poshak", image: leheriyaPoshak },
-      { name: "Gota Patti Poshak", image: gotaPattiPoshak },
-      { name: "Bridal Poshak", image: bridalPoshak },
+      { name: "Traditional Poshak", image: traditionalPoshak, href: "/category/rajputi-poshak/traditional-poshak" },
+      { name: "Leheriya Poshak", image: leheriyaPoshak, href: "/category/rajputi-poshak/leheriya-poshak" },
+      { name: "Gota Patti Poshak", image: gotaPattiPoshak, href: "/category/rajputi-poshak/gota-patti-poshak" },
+      { name: "Bridal Poshak", image: bridalPoshak, href: "/category/rajputi-poshak/bridal-poshak" },
     ],
   },
 ];
@@ -155,10 +155,10 @@ export default function CategoriesPage() {
                       {String(itemIndex + 1).padStart(2, "0")}
                     </span>
                   </div>
-                  {collection.id === "sarees" && "href" in item && (
+                  {"href" in item && (
                     <Link
                       href={item.href}
-                      aria-label={`Shop ${item.name} sarees`}
+                      aria-label={`Explore ${item.name}`}
                       className="absolute inset-0 z-10"
                     />
                   )}
