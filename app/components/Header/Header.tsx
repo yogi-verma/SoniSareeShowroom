@@ -103,15 +103,7 @@ export default function Header() {
           >
             <FiSearch aria-hidden="true" size={18} strokeWidth={1.6} />
           </button>
-          <a
-            href="#shop"
-            aria-label="Add items to your wishlist"
-            title="Wishlist"
-            className="flex h-10 items-center gap-2 rounded-full border border-white/20 px-3 text-white/90 transition hover:border-[#c994bc] hover:bg-white/5 hover:text-white"
-          >
-            <FiBookmark aria-hidden="true" size={17} strokeWidth={1.6} />
-            <span className="hidden text-[10px] tracking-wide sm:inline">Wishlist</span>
-          </a>
+          
 
           <button
             type="button"
