@@ -1,41 +1,43 @@
 import Link from "next/link";
 import { FaArrowRight } from "react-icons/fa";
 import BestSellers from "./BestSellers";
-
-
-const image = (id: string, width = 600) =>
-  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&q=85`;
+import banarshiSaree from "../../assets/SareeSection/Banarshi-silk.avif";
+import cottonSaree from "../../assets/SareeSection/Cotton-Saree.avif";
+import georgetteSaree from "../../assets/SareeSection/Georgette-Saree.avif";
+import FestiveSaree from "../../assets/SareeSection/Festival-Saree.avif";
+import rajputiPoshak from "../../assets/RajputiPoshakSection/TraditionalRajputi-Poshak.avif";
+import ShararaSuit from "../../assets/SuitSection/Sharara-Shut.avif";
 
 const categories = [
   {
     name: "Banarshi Sarees",
     note: "Elegant & timeless",
-    image: "photo-1610030469983-98e550d6193c",
+    image: banarshiSaree,
   },
   {
     name: "Cotton Sarees",
     note: "Comfort & charm",
-    image: "photo-1583391733956-6c78276477e2",
+    image: cottonSaree,
   },
   {
     name: "Georgette Sarees",
     note: "Light & graceful",
-    image: "photo-1617627143750-d86bc21e42bb",
+    image: georgetteSaree,
   },
   {
     name: "Rajasthani Suits",
     note: "Royal tradition",
-    image: "photo-1610030469668-8e9f641aaf3c",
+    image: rajputiPoshak,
   },
   {
-    name: "Party Wear Suits",
+    name: "Sharara Suits",
     note: "For special moments",
-    image: "photo-1609357605129-26f69add5d6e",
+    image: ShararaSuit,
   },
   {
-    name: "Handloom Sarees",
+    name: "Festive & Occasion",
     note: "Handcrafted beauty",
-    image: "photo-1609748340471-14c1fcbad10d",
+    image: FestiveSaree,
   },
 ];
 
@@ -71,7 +73,7 @@ export default function Popular() {
               className="flex flex-col items-center text-center"
             >
               <img
-                src={image(category.image, 320)}
+                src={category.image.src}
                 alt={category.name}
                 className="mb-2 h-[22vw] w-[22vw] rounded-full object-cover transition hover:scale-105 md:h-24 md:w-24"
               />
