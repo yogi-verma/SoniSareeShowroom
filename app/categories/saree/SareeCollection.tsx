@@ -3,6 +3,7 @@
 import Image, { type StaticImageData } from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
+import { useAuth } from "../../components/Auth/AuthProvider";
 
 type SareeProduct = {
   _id: string;
@@ -31,10 +32,10 @@ function formatPrice(price: number) {
 }
 
 export default function SareeCollection({ title, editTitle, description, category, heroImage }: Props) {
+  const { user, openSignIn } = useAuth();
   const [products, setProducts] = useState<SareeProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [cart, setCart] = useState<Record<string, number>>({});
   const [message, setMessage] = useState("");
 
   const loadProducts = useCallback(async () => {
@@ -82,9 +83,12 @@ export default function SareeCollection({ title, editTitle, description, categor
     return () => window.clearTimeout(timeoutId);
   }, [message]);
 
-  const addToBag = (product: SareeProduct) => {
-    setCart((current) => ({ ...current, [product._id]: (current[product._id] ?? 0) + 1 }));
-    setMessage(`${product.name} added to your bag`);
+  const requestShoppingAction = () => {
+    if (!user) {
+      openSignIn();
+      return;
+    }
+    setMessage("Your bag and checkout are coming soon.");
   };
 
   return (
@@ -142,8 +146,8 @@ export default function SareeCollection({ title, editTitle, description, categor
                     <span className={`text-[8px] font-medium sm:text-[9px] ${product.stock > 0 ? "text-[#54745f]" : "text-[#a13d39]"}`}>{product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}</span>
                   </div>
                   <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3 sm:gap-2 sm:pt-4">
-                    <button type="button" disabled={!product.stock} onClick={() => addToBag(product)} className="min-h-9 rounded-sm bg-[#30172f] px-1.5 text-[8px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:bg-[#a99ca8] sm:min-h-10 sm:px-2 sm:text-[10px]">Buy now</button>
-                    <button type="button" disabled={!product.stock} onClick={() => addToBag(product)} className="min-h-9 rounded-sm border border-[#cbb8c8] px-1.5 text-[8px] font-semibold tracking-wide text-[#30172f] transition hover:border-[#30172f] hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10 sm:px-2 sm:text-[10px]">{cart[product._id] ? `Add again (${cart[product._id]})` : "Add to bag"}</button>
+                    <button type="button" disabled={!product.stock} onClick={requestShoppingAction} className="min-h-9 rounded-sm bg-[#30172f] px-1.5 text-[8px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:bg-[#a99ca8] sm:min-h-10 sm:px-2 sm:text-[10px]">Buy now</button>
+                    <button type="button" disabled={!product.stock} onClick={requestShoppingAction} className="min-h-9 rounded-sm border border-[#cbb8c8] px-1.5 text-[8px] font-semibold tracking-wide text-[#30172f] transition hover:border-[#30172f] hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10 sm:px-2 sm:text-[10px]">Add to bag</button>
                   </div>
                 </div>
               </article>

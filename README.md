@@ -1,4 +1,17 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Soni Saree Showroom frontend
+
+## Getting started
+
+Set `NEXT_PUBLIC_AUTH_API_URL` in `frontend/.env` to the base URL of the Express backend. For local development, use `http://localhost:5000`. This value is public and must not contain credentials. The backend must allow the frontend origin in `FRONTEND_ORIGIN` and have its Google OAuth callback configured.
+
+Then run:
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). Browsing is public. Users are asked to sign in with Google from the profile menu or when they choose Buy now/Add to bag. Checkout and cart persistence are not enabled yet.
 
 ## Getting Started
 

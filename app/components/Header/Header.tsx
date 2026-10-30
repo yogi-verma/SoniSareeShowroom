@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { FiBookmark, FiSearch } from "react-icons/fi";
+import { useEffect, useRef, useState } from "react";
+import { FiBookmark, FiChevronRight, FiLogIn, FiSearch, FiShield, FiUser } from "react-icons/fi";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminLoginModal from "../../../admin/component/AdminLoginModal";
 import { getLoggedInAdmin } from "../../../admin/utils/adminApi";
+import { useAuth } from "../Auth/AuthProvider";
 
 const navigation = [
   { label: "Home", href: "/" },
@@ -13,7 +14,7 @@ const navigation = [
   { label: "Collections", href: "#collections" },
 ];
 
-function Navigation({ mobile = false, onAdminClick }: { mobile?: boolean; onAdminClick: () => void }) {
+function Navigation({ mobile = false }: { mobile?: boolean }) {
   return (
     <nav
       aria-label="Main navigation"
@@ -32,26 +33,36 @@ function Navigation({ mobile = false, onAdminClick }: { mobile?: boolean; onAdmi
           {item.label}
         </Link>
       ))}
-      <button
-        type="button"
-        onClick={onAdminClick}
-        className="group relative py-2 font-medium transition-colors hover:text-[#e8c5dc] after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-[#d9b5cf] after:transition-transform after:duration-300 after:content-[''] hover:after:origin-left hover:after:scale-x-100"
-      >
-        Admin
-      </button>
     </nav>
   );
 }
 
 export default function Header() {
   const router = useRouter();
+  const { user, isLoading, openSignIn } = useAuth();
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!profileMenuRef.current?.contains(event.target as Node)) setIsProfileMenuOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsProfileMenuOpen(false);
+    }
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
 
   async function handleAdminClick() {
     if (isCheckingAdmin) return;
     setIsCheckingAdmin(true);
-
     try {
       await getLoggedInAdmin();
       router.push("/admin/sonisaree");
@@ -60,6 +71,12 @@ export default function Header() {
     } finally {
       setIsCheckingAdmin(false);
     }
+  }
+
+  function openUserProfile() {
+    if (!user) return;
+    setIsProfileMenuOpen(false);
+    router.push(`/me/${encodeURIComponent(user.email)}`);
   }
 
   return (
@@ -75,7 +92,7 @@ export default function Header() {
           </span>
         </Link>
 
-        <Navigation onAdminClick={handleAdminClick} />
+        <Navigation />
 
         <div className="flex items-center gap-2 sm:gap-3">
           <button
@@ -95,9 +112,127 @@ export default function Header() {
             <FiBookmark aria-hidden="true" size={17} strokeWidth={1.6} />
             <span className="hidden text-[10px] tracking-wide sm:inline">Wishlist</span>
           </a>
+
+          <div className="relative" ref={profileMenuRef}>
+            <button
+              type="button"
+              aria-label={user ? `Account for ${user.name}` : "Open account menu"}
+              aria-expanded={isProfileMenuOpen}
+              aria-controls="account-menu"
+              title="Account"
+              onClick={() => setIsProfileMenuOpen((open) => !open)}
+              className="grid h-10 w-10 place-items-center rounded-full border border-white/25 text-white/95 transition hover:border-[#c994bc] hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e8c5dc]"
+            >
+              {user?.picture ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.picture} alt="" className="h-8 w-8 rounded-full object-cover" />
+              ) : (
+                <FiUser aria-hidden="true" size={18} strokeWidth={1.7} />
+              )}
+            </button>
+
+            {isProfileMenuOpen && (
+              <section
+                id="account-menu"
+                aria-label="Account menu"
+                className="absolute right-0 top-[calc(100%+12px)] z-[60] w-[min(340px,calc(100vw-28px))] overflow-hidden rounded-xl border border-[#eadfd8] bg-[#fffdfa] text-[#302531] shadow-[0_20px_60px_rgba(22,13,22,0.28)]"
+              >
+                <div className="bg-gradient-to-br from-[#40233e] via-[#30172f] to-[#211821] px-5 pb-5 pt-5 text-white">
+                  {/* <span className="grid h-9 w-9 place-items-center rounded-lg border border-white/20 bg-white/10 font-serif text-xl text-[#e4bfd8]" aria-hidden="true">❋</span> */}
+                  {isLoading ? (
+                    <div className="mt-4 space-y-2" aria-label="Loading account" aria-busy="true">
+                      <div className="h-4 w-36 animate-pulse rounded bg-white/20" />
+                      <div className="h-3 w-52 animate-pulse rounded bg-white/10" />
+                    </div>
+                  ) : user ? (
+                    <>
+                      <p className="text-[9px] font-semibold tracking-[0.22em] text-[#e4bfd8]">WELCOME BACK</p>
+                      <p className="mt-1 truncate font-serif text-xl">{user.name}</p>
+                      <p className="mt-0.5 truncate text-xs text-white/65">{user.email}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[9px] font-semibold tracking-[0.22em] text-[#e4bfd8]">YOUR ACCOUNT</p>
+                      <p className="mt-1 font-serif text-xl">Welcome to Soni</p>
+                      <p className="mt-1 text-xs leading-5 text-white/70">Sign in to make your shopping experience yours.</p>
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-2 p-3">
+                  {isLoading ? (
+                    <p className="px-3 py-2 text-xs text-[#777078]">Checking your account…</p>
+                  ) : user ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={openUserProfile}
+                        className="group flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left transition hover:bg-[#f6eef4] focus-visible:outline-2 focus-visible:outline-[#986d8f]"
+                      >
+                        <span className="grid h-9 w-9 place-items-center rounded-full bg-[#f3eaf1] text-[#684768]"><FiUser size={17} /></span>
+                        <span className="flex-1">
+                          <span className="block text-sm font-semibold">Profile</span>
+                          <span className="mt-0.5 block text-[10px] text-[#817681]">Personal details and account</span>
+                        </span>
+                        <FiChevronRight className="text-[#9b8c9a] transition group-hover:translate-x-0.5" size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          void handleAdminClick();
+                        }}
+                        className="group flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left transition hover:bg-[#f6eef4] focus-visible:outline-2 focus-visible:outline-[#986d8f]"
+                      >
+                        <span className="grid h-9 w-9 place-items-center rounded-full bg-[#f7f2eb] text-[#85683f]"><FiShield size={16} /></span>
+                        <span className="flex-1">
+                          <span className="block text-sm font-semibold">Admin</span>
+                          <span className="mt-0.5 block text-[10px] text-[#817681]">Showroom management</span>
+                        </span>
+                        <FiChevronRight className="text-[#9b8c9a] transition group-hover:translate-x-0.5" size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          openSignIn();
+                        }}
+                        className="group flex min-h-12 w-full items-center gap-3 rounded-lg bg-[#30172f] px-3 text-left text-white transition hover:bg-[#593153] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#986d8f]"
+                      >
+                        <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10"><FiLogIn size={17} /></span>
+                        <span className="flex-1">
+                          <span className="block text-sm font-semibold">Login / Sign up</span>
+                          <span className="mt-0.5 block text-[10px] text-white/65">Continue securely with Google</span>
+                        </span>
+                        <FiChevronRight className="text-white/65 transition group-hover:translate-x-0.5" size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          void handleAdminClick();
+                        }}
+                        className="group flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left transition hover:bg-[#f6eef4] focus-visible:outline-2 focus-visible:outline-[#986d8f]"
+                      >
+                        <span className="grid h-9 w-9 place-items-center rounded-full bg-[#f7f2eb] text-[#85683f]"><FiShield size={16} /></span>
+                        <span className="flex-1">
+                          <span className="block text-sm font-semibold">Admin</span>
+                          <span className="mt-0.5 block text-[10px] text-[#817681]">Showroom management</span>
+                        </span>
+                        <FiChevronRight className="text-[#9b8c9a] transition group-hover:translate-x-0.5" size={16} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
         </div>
       </div>
-      <Navigation mobile onAdminClick={handleAdminClick} />
+      <Navigation mobile />
       {isAdminModalOpen && (
         <AdminLoginModal open onClose={() => setIsAdminModalOpen(false)} />
       )}

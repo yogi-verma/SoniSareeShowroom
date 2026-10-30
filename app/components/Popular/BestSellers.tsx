@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
+import { useAuth } from "../Auth/AuthProvider";
 
 type Product = {
   _id: string;
@@ -14,6 +15,32 @@ type Product = {
   photo: { url: string };
 };
 
+let sareesRequest: Promise<Product[]> | null = null;
+
+function fetchSarees() {
+  if (sareesRequest) return sareesRequest;
+
+  const request = fetch("/api/catalog/products?productType=saree", {
+    cache: "no-store",
+  }).then(async (response) => {
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || "Could not load sarees.");
+    return (result.products ?? []) as Product[];
+  });
+
+  sareesRequest = request;
+  void request.then(
+    () => {
+      if (sareesRequest === request) sareesRequest = null;
+    },
+    () => {
+      if (sareesRequest === request) sareesRequest = null;
+    },
+  );
+
+  return request;
+}
+
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -23,32 +50,45 @@ function formatPrice(price: number) {
 }
 
 export default function BestSellers() {
+  const { user, openSignIn } = useAuth();
   const rail = useRef<HTMLDivElement>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const controller = new AbortController();
+    if (!message) return;
+    const timeoutId = window.setTimeout(() => setMessage(""), 2600);
+    return () => window.clearTimeout(timeoutId);
+  }, [message]);
 
-    fetch("/api/catalog/products?productType=saree", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.message || "Could not load sarees.");
-        setProducts(result.products ?? []);
+  function requestShoppingAction() {
+    if (!user) {
+      openSignIn();
+      return;
+    }
+    setMessage("Your bag and checkout are coming soon.");
+  }
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetchSarees()
+      .then((result) => {
+        if (isActive) setProducts(result);
       })
       .catch((loadError: unknown) => {
-        if (controller.signal.aborted) return;
+        if (!isActive) return;
         setError(loadError instanceof Error ? loadError.message : "Could not load sarees.");
       })
       .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false);
+        if (isActive) setIsLoading(false);
       });
 
-    return () => controller.abort();
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const scrollCards = (direction: -1 | 1) => {
@@ -147,13 +187,17 @@ export default function BestSellers() {
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  className="min-h-10 rounded-sm bg-plum px-2 text-[9px] font-semibold tracking-wide text-white transition hover:bg-[#593153] sm:text-[10px]"
+                  disabled={!product.stock}
+                  onClick={requestShoppingAction}
+                  className="min-h-10 rounded-sm bg-plum px-2 text-[9px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[10px]"
                 >
                   Buy Now
                 </button>
                 <button
                   type="button"
-                  className="min-h-10 rounded-sm border border-[#cbb8c8] px-2 text-[9px] font-semibold tracking-wide text-plum transition hover:border-plum hover:bg-[#f6eef4] sm:text-[10px]"
+                  disabled={!product.stock}
+                  onClick={requestShoppingAction}
+                  className="min-h-10 rounded-sm border border-[#cbb8c8] px-2 text-[9px] font-semibold tracking-wide text-plum transition hover:border-plum hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[10px]"
                 >
                   Add to Cart
                 </button>
@@ -162,6 +206,7 @@ export default function BestSellers() {
           </article>
         ))}
       </div>
+      <div aria-live="polite" className={`fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-[#30172f] px-5 py-3 text-center text-[11px] text-white shadow-xl transition-all ${message ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"}`}>{message}</div>
     </section>
   );
 }
