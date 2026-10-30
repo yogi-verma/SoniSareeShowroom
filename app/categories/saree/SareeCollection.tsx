@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
 
@@ -19,6 +19,7 @@ type Props = {
   editTitle: string;
   description: string;
   category?: string;
+  heroImage: StaticImageData;
 };
 
 function formatPrice(price: number) {
@@ -29,7 +30,7 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
-export default function SareeCollection({ title, editTitle, description, category }: Props) {
+export default function SareeCollection({ title, editTitle, description, category, heroImage }: Props) {
   const [products, setProducts] = useState<SareeProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -86,12 +87,10 @@ export default function SareeCollection({ title, editTitle, description, categor
     setMessage(`${product.name} added to your bag`);
   };
 
-  const heroImage = products[0]?.photo.url;
-
   return (
     <main className="min-h-screen bg-[#faf7f2] text-[#2d242d]">
       <section className="relative isolate overflow-hidden bg-[#281b26] text-white">
-        {heroImage && <Image src={heroImage} alt={`${title} collection`} fill priority unoptimized className="-z-20 object-cover object-center opacity-45" />}
+        <Image src={heroImage} alt={`${title} collection`} fill priority sizes="100vw" className="-z-20 object-cover object-center opacity-45" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#211821]/95 via-[#211821]/75 to-[#211821]/35" />
         <div className="mx-auto max-w-6xl px-[6%] pb-12 pt-32 sm:pb-16 sm:pt-25">
           <span className="text-[9px] font-semibold tracking-[0.28em] text-[#e3bfd8]">THE SONI SAREE EDIT</span>

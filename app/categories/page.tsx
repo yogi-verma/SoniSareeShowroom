@@ -3,6 +3,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import Header from "../components/Header/Header";
 import Footer from "../components/Footer/Footer";
+import banarshiSaree from "../assets/SareeSection/Banarshi-silk.avif";
+import bandhaniSaree from "../assets/SareeSection/Bandhani-Saree.avif";
+import cottonSaree from "../assets/SareeSection/Cotton-Saree.avif";
+import festivalSaree from "../assets/SareeSection/Festival-Saree.avif";
+import georgetteSaree from "../assets/SareeSection/Georgette-Saree.avif";
+import kanjivaramSaree from "../assets/SareeSection/Kanjivaram-Saree.avif";
 
 export const metadata: Metadata = {
   title: "Shop by Category | Soni Saree Showroom",
@@ -20,12 +26,12 @@ const collections = [
     title: "Sarees",
     description: "Artful weaves and graceful drapes for every occasion.",
     items: [
-      { name: "Banarasi Silk", image: "photo-1717835735088-4c821959bdaa", href: "/category/saree/banarshi" },
-      { name: "Kanjivaram Silk", image: "photo-1610030469983-98e550d6193c", href: "/category/saree/kanjivaram" },
-      { name: "Cotton & Handloom", image: "photo-1609748340471-14c1fcbad10d", href: "/category/saree/cotton" },
-      { name: "Georgette & Chiffon", image: "photo-1617627143750-d86bc21e42bb", href: "/category/saree/georgette" },
-      { name: "Bandhani", image: "photo-1753981031189-27bb7bd1c079", href: "/category/saree/bandhani" },
-      { name: "Festive & Occasion", image: "photo-1717835429626-d6dd3f2c9afb", href: "/category/saree/festival" },
+      { name: "Banarasi Silk", image: banarshiSaree, href: "/category/saree/banarshi" },
+      { name: "Kanjivaram Silk", image: kanjivaramSaree, href: "/category/saree/kanjivaram" },
+      { name: "Cotton & Handloom", image: cottonSaree, href: "/category/saree/cotton" },
+      { name: "Georgette & Chiffon", image: georgetteSaree, href: "/category/saree/georgette" },
+      { name: "Bandhani", image: bandhaniSaree, href: "/category/saree/bandhani" },
+      { name: "Festive & Occasion", image: festivalSaree, href: "/category/saree/festival" },
     ],
   },
   {
@@ -63,7 +69,7 @@ export default function CategoriesPage() {
 
       <section className="relative isolate overflow-hidden bg-[#281b26] text-white">
         <Image
-          src={image("photo-1617627143750-d86bc21e42bb", 1800)}
+          src={banarshiSaree}
           alt="Traditional Indian saree in rich festive colors"
           fill
           sizes="100vw"
@@ -130,7 +136,7 @@ export default function CategoriesPage() {
                   className="group relative isolate aspect-[4/4.8] overflow-hidden bg-[#e8ded9]"
                 >
                   <Image
-                    src={image(item.image)}
+                    src={typeof item.image === "string" ? image(item.image) : item.image}
                     alt={item.name}
                     fill
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

@@ -2,9 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
+import {FiArrowRight } from "react-icons/fi";
 import mainPhoto from "../../assets/HeroSection/mainphoto.jpeg";
 import innerPhoto from "../../assets/HeroSection/innerphoto.jpeg";
+import hero1 from "../../assets/HeroSection/hero1.avif";
+import hero2 from "../../assets/HeroSection/hero2.avif";
+import hero3 from "../../assets/HeroSection/hero3.avif";
+import hero4 from "../../assets/HeroSection/hero4.avif";
+import hero5 from "../../assets/HeroSection/hero5.avif";
+
 
 const slides = [
   {
@@ -33,7 +39,7 @@ const slides = [
     accent: "for every story.",
     description:
       "Heirloom-worthy weaves, chosen to make your most meaningful moments unforgettable.",
-    image: "photo-1610030469983-98e550d6193c",
+    image: hero1,
     alt: "Model in a richly woven purple and gold saree",
     category: "THE SAREE EDIT",
   },
@@ -43,7 +49,7 @@ const slides = [
     accent: "occasion-ready.",
     description:
       "Statement suits with the fine details, beautiful colors, and graceful drape you love.",
-    image: "photo-1705921290980-6a644d2828ed",
+    image: hero2,
     alt: "Model wearing a mint green embroidered Indian suit",
     category: "THE SUIT EDIT",
   },
@@ -53,7 +59,7 @@ const slides = [
     accent: "made yours.",
     description:
       "Discover the artistry of Indian textiles in colors that feel distinctly you.",
-    image: "photo-1717835735088-4c821959bdaa",
+    image: hero3,
     alt: "Model wearing a red and gold traditional saree",
     category: "THE SAREE EDIT",
   },
@@ -63,7 +69,7 @@ const slides = [
     accent: "every detail.",
     description:
       "Meet expressive Indian occasion wear made for celebrations big and small.",
-    image: "photo-1742800767764-479556a4d8a5",
+    image: hero4,
     alt: "Model in a red floral Indian suit with a flowing dupatta",
     category: "THE SUIT EDIT",
   },
@@ -73,14 +79,11 @@ const slides = [
     accent: "being you.",
     description:
       "From first glance to final drape, find a look that feels like your own.",
-    image: "photo-1753981031189-27bb7bd1c079",
+    image: hero5,
     alt: "Model wearing an ornate green silk saree",
     category: "THE SAREE EDIT",
   },
 ];
-
-const imageUrl = (id: string) =>
-  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=2400&q=85`;
 
 export default function Hero() {
   const [activeSlide, setActiveSlide] = useState(0);
@@ -93,10 +96,6 @@ export default function Hero() {
     return () => window.clearInterval(intervalId);
   }, []);
 
-  const showPrevious = () =>
-    setActiveSlide((current) => (current - 1 + slides.length) % slides.length);
-  const showNext = () =>
-    setActiveSlide((current) => (current + 1) % slides.length);
 
   const current = slides[activeSlide];
 
@@ -110,11 +109,7 @@ export default function Hero() {
       {slides.map((slide, index) => (
         <Image
           key={`slide-${index}`}
-          src={
-            typeof slide.image === "string"
-              ? imageUrl(slide.image)
-              : slide.image
-          }
+          src={slide.image}
           alt={index === activeSlide ? slide.alt : ""}
           aria-hidden={index !== activeSlide}
           fill

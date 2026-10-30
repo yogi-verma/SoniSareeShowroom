@@ -8,7 +8,7 @@ const image = (id: string, width = 600) =>
 
 const categories = [
   {
-    name: "Silk Sarees",
+    name: "Banarshi Sarees",
     note: "Elegant & timeless",
     image: "photo-1610030469983-98e550d6193c",
   },
