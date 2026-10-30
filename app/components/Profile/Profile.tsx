@@ -1,27 +1,99 @@
 "use client";
 
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { FiArrowRight, FiCheckCircle, FiLogIn, FiLogOut, FiMail, FiShield, FiUser } from "react-icons/fi";
+import {
+  FiArrowRight,
+  FiCheck,
+  FiCheckCircle,
+  FiEdit2,
+  FiHome,
+  FiLogIn,
+  FiLogOut,
+  FiMail,
+  FiMapPin,
+  FiPhone,
+  FiPlus,
+  FiRefreshCw,
+  FiShield,
+  FiTrash2,
+  FiUser,
+  FiX,
+} from "react-icons/fi";
 import Header from "../Header/Header";
 import { type AuthUser, useAuth } from "../Auth/AuthProvider";
+
+type UserAddress = {
+  _id: string;
+  label: string;
+  flatHouseNo: string;
+  areaStreetSectorVillage: string;
+  landmark: string;
+  pincode: string;
+  townCity: string;
+  state: string;
+  isDefault: boolean;
+};
+type ProfileData = AuthUser & {
+  phoneNumber: string;
+  addresses: UserAddress[];
+};
+type AddressDraft = Omit<UserAddress, "_id">;
+type ApiError = { message?: string };
+
+const authApiUrl = (process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:5000").replace(/\/+$/, "");
+
+const emptyAddress: AddressDraft = {
+  label: "Home",
+  flatHouseNo: "",
+  areaStreetSectorVillage: "",
+  landmark: "",
+  pincode: "",
+  townCity: "",
+  state: "",
+  isDefault: false,
+};
+
+const addressFields: { name: keyof AddressDraft; label: string; required?: boolean; wide?: boolean; placeholder?: string }[] = [
+  { name: "label", label: "Address label", placeholder: "Home, Work, etc." },
+  { name: "flatHouseNo", label: "Flat / House no.", placeholder: "e.g. 12B, second floor" },
+  { name: "areaStreetSectorVillage", label: "Area / Street / Sector / Village", required: true, wide: true },
+  { name: "landmark", label: "Landmark", placeholder: "Near a well-known place" },
+  { name: "pincode", label: "Pincode", required: true, placeholder: "6-digit pincode" },
+  { name: "townCity", label: "Town / City", required: true },
+  { name: "state", label: "State", required: true },
+];
+
+async function requestApi<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  const response = await fetch(`${authApiUrl}/api/users/me${path}`, {
+    ...init,
+    headers,
+    credentials: "include",
+    cache: "no-store",
+  });
+  const result = (await response.json().catch(() => ({}))) as T & ApiError;
+  if (!response.ok) throw new Error(result.message || "We couldn’t complete that request. Please try again.");
+  return result;
+}
 
 function normalizeEmail(email: string) {
   let normalized = email.trim();
   try {
     normalized = decodeURIComponent(normalized);
   } catch {
-    // Keep the original value when it contains a malformed escape sequence.
+    // Keep the original value when a route contains a malformed escape sequence.
   }
   return normalized.trim().toLowerCase();
 }
 
-function Avatar({ user, size = "large" }: { user: AuthUser; size?: "large" | "small" }) {
-  const dimensions = size === "large" ? "h-20 w-20 text-3xl" : "h-12 w-12 text-xl";
+function Avatar({ user }: { user: AuthUser }) {
   return user.picture ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={user.picture} alt="" className={`${dimensions} shrink-0 rounded-full border-4 border-white/70 object-cover shadow-md`} />
+    <img src={user.picture} alt="" className="h-20 w-20 shrink-0 rounded-full border-4 border-white/70 object-cover shadow-md" />
   ) : (
-    <span className={`${dimensions} grid shrink-0 place-items-center rounded-full border-4 border-white/70 bg-[#eadce8] font-serif text-[#684768] shadow-md`} aria-hidden="true">
+    <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full border-4 border-white/70 bg-[#eadce8] font-serif text-3xl text-[#684768] shadow-md" aria-hidden="true">
       {user.name.charAt(0).toUpperCase()}
     </span>
   );
@@ -42,13 +114,184 @@ function LoadingProfile() {
   );
 }
 
+function addressSummary(address: UserAddress) {
+  return [
+    address.flatHouseNo,
+    address.areaStreetSectorVillage,
+    address.landmark ? `Near ${address.landmark}` : "",
+    [address.townCity, address.state, address.pincode].filter(Boolean).join(", "),
+  ].filter(Boolean).join(", ");
+}
+
 export default function Profile({ email }: { email: string }) {
   const router = useRouter();
-  const { user, isLoading, openSignIn, requestLogout } = useAuth();
-
-  if (isLoading) return <LoadingProfile />;
-
+  const { user, isLoading: isAuthLoading, openSignIn, requestLogout } = useAuth();
   const isOwnProfile = Boolean(user && normalizeEmail(user.email) === normalizeEmail(email));
+
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const [phoneDraft, setPhoneDraft] = useState("");
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+
+  const [isAddressEditorOpen, setIsAddressEditorOpen] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [addressDraft, setAddressDraft] = useState<AddressDraft>(emptyAddress);
+  const [addressError, setAddressError] = useState("");
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<UserAddress | null>(null);
+  const [isDeletingAddress, setIsDeletingAddress] = useState(false);
+
+  const loadProfile = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsProfileLoading(true);
+    setLoadError("");
+    try {
+      const result = await requestApi<{ user: ProfileData }>("");
+      setProfile(result.user);
+      setPhoneDraft(result.user.phoneNumber || "");
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Could not load your profile.");
+    } finally {
+      setIsProfileLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAuthLoading || !isOwnProfile) return;
+    let isActive = true;
+    requestApi<{ user: ProfileData }>("")
+      .then(({ user: currentProfile }) => {
+        if (!isActive) return;
+        setProfile(currentProfile);
+        setPhoneDraft(currentProfile.phoneNumber || "");
+        setLoadError("");
+        setIsProfileLoading(false);
+      })
+      .catch((error: unknown) => {
+        if (!isActive) return;
+        setLoadError(error instanceof Error ? error.message : "Could not load your profile.");
+        setIsProfileLoading(false);
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [isAuthLoading, isOwnProfile, user?.id]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeoutId = window.setTimeout(() => setNotice(""), 3200);
+    return () => window.clearTimeout(timeoutId);
+  }, [notice]);
+
+  async function savePhone(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPhoneError("");
+    setIsSavingPhone(true);
+    try {
+      const result = await requestApi<{ phoneNumber: string }>("", {
+        method: "PATCH",
+        body: JSON.stringify({ phoneNumber: phoneDraft }),
+      });
+      setProfile((current) => current ? { ...current, phoneNumber: result.phoneNumber } : current);
+      setPhoneDraft(result.phoneNumber);
+      setIsEditingPhone(false);
+      setNotice("Phone number updated.");
+    } catch (error) {
+      setPhoneError(error instanceof Error ? error.message : "Could not update your phone number.");
+    } finally {
+      setIsSavingPhone(false);
+    }
+  }
+
+  function beginCreateAddress() {
+    setEditingAddressId(null);
+    setAddressDraft({ ...emptyAddress, isDefault: !profile?.addresses.length });
+    setAddressError("");
+    setIsAddressEditorOpen(true);
+  }
+
+  function beginEditAddress(address: UserAddress) {
+    setEditingAddressId(address._id);
+    setAddressDraft({
+      label: address.label || "Home",
+      flatHouseNo: address.flatHouseNo || "",
+      areaStreetSectorVillage: address.areaStreetSectorVillage || "",
+      landmark: address.landmark || "",
+      pincode: address.pincode || "",
+      townCity: address.townCity || "",
+      state: address.state || "",
+      isDefault: address.isDefault,
+    });
+    setAddressError("");
+    setIsAddressEditorOpen(true);
+  }
+
+  async function saveAddress(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAddressError("");
+    setIsSavingAddress(true);
+    const payload = {
+      ...addressDraft,
+      label: addressDraft.label.trim() || "Home",
+      flatHouseNo: addressDraft.flatHouseNo.trim(),
+      areaStreetSectorVillage: addressDraft.areaStreetSectorVillage.trim(),
+      landmark: addressDraft.landmark.trim(),
+      pincode: addressDraft.pincode.trim(),
+      townCity: addressDraft.townCity.trim(),
+      state: addressDraft.state.trim(),
+    };
+
+    try {
+      const path = editingAddressId ? `/addresses/${encodeURIComponent(editingAddressId)}` : "/addresses";
+      const result = await requestApi<{ address: UserAddress }>(path, {
+        method: editingAddressId ? "PATCH" : "POST",
+        body: JSON.stringify(payload),
+      });
+      await loadProfile(false);
+      setIsAddressEditorOpen(false);
+      setNotice(editingAddressId ? "Address updated." : "Address saved.");
+      if (!result.address) setAddressError("The address was saved, but the updated list could not be displayed.");
+    } catch (error) {
+      setAddressError(error instanceof Error ? error.message : "Could not save this address.");
+    } finally {
+      setIsSavingAddress(false);
+    }
+  }
+
+  async function setDefaultAddress(addressId: string) {
+    setLoadError("");
+    try {
+      await requestApi(`/addresses/${encodeURIComponent(addressId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isDefault: true }),
+      });
+      await loadProfile(false);
+      setNotice("Default delivery address updated.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not update the default address.");
+    }
+  }
+
+  async function deleteAddress() {
+    if (!pendingDelete) return;
+    setIsDeletingAddress(true);
+    try {
+      await requestApi(`/addresses/${encodeURIComponent(pendingDelete._id)}`, { method: "DELETE" });
+      await loadProfile(false);
+      setPendingDelete(null);
+      setNotice("Address removed.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not delete this address.");
+    } finally {
+      setIsDeletingAddress(false);
+    }
+  }
+
+  if (isAuthLoading || (isOwnProfile && isProfileLoading)) return <LoadingProfile />;
 
   return (
     <main className="min-h-screen bg-[#faf7f2] text-[#302531]">
@@ -59,13 +302,13 @@ export default function Profile({ email }: { email: string }) {
         <div className="relative mx-auto max-w-5xl px-5 sm:px-8">
           <span className="text-[9px] font-semibold tracking-[0.28em] text-[#e4bfd8]">SONI SAREE SHOWROOM</span>
           <h1 className="mt-3 font-serif text-4xl sm:text-5xl">Your profile</h1>
-          <p className="mt-3 max-w-lg text-sm leading-6 text-white/70">Your account details, all in one place. We’re glad you’re here.</p>
+          <p className="mt-3 max-w-lg text-sm leading-6 text-white/70">Your contact details and delivery addresses, all in one place.</p>
         </div>
       </section>
 
-      <section className="relative mx-auto -mt-16 max-w-5xl px-4 pb-16 sm:px-8 sm:pb-20">
-        {user && isOwnProfile ? (
-          <div className="grid gap-5 md:grid-cols-[300px_1fr]">
+      <section className="relative mx-auto -mt-16 max-w-6xl px-4 pb-16 sm:px-8 sm:pb-20">
+        {user && isOwnProfile && profile ? (
+          <div className="grid items-start gap-5 lg:grid-cols-[290px_minmax(0,1fr)]">
             <aside className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-6 shadow-[0_16px_44px_rgba(43,27,38,0.11)] sm:p-7">
               <div className="flex flex-col items-center text-center">
                 <Avatar user={user} />
@@ -83,49 +326,134 @@ export default function Profile({ email }: { email: string }) {
                   <p className="mt-0.5 text-[10px] text-[#817681]">Connected with Google</p>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={requestLogout}
+                className="mt-5 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#e4d9e2] text-xs font-semibold text-[#684768] transition hover:bg-[#f6eef4]"
+              >
+                <FiLogOut size={14} /> Log out
+              </button>
             </aside>
 
-            <div className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-6 shadow-[0_16px_44px_rgba(43,27,38,0.11)] sm:p-8">
-              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#eee7e1] pb-5">
-                <div>
-                  <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">ACCOUNT INFORMATION</span>
-                  <h2 className="mt-1.5 font-serif text-2xl">Personal details</h2>
-                  <p className="mt-1 text-xs text-[#817681]">These details come from your Google account.</p>
+            <div className="space-y-5">
+              {loadError && (
+                <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#efd5d3] bg-white px-4 py-3 text-xs text-[#9b3935]">
+                  <span>{loadError}</span>
+                  <button type="button" onClick={() => void loadProfile()} className="inline-flex items-center gap-1.5 font-semibold"><FiRefreshCw size={13} /> Retry</button>
                 </div>
-                <span className="rounded-full border border-[#e8dce7] bg-[#fbf7fa] px-3 py-1.5 text-[9px] font-semibold tracking-wide text-[#684768]">CUSTOMER ACCOUNT</span>
-              </div>
+              )}
 
-              <div className="mt-5 space-y-3">
-                <div className="flex items-center gap-4 rounded-xl border border-[#eee7e1] bg-white p-4 sm:px-5">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f6eef4] text-[#684768]"><FiUser size={17} /></span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[9px] font-semibold tracking-[0.15em] text-[#918792]">FULL NAME</p>
-                    <p className="mt-1 truncate text-sm font-medium">{user.name}</p>
+              <section className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#eee7e1] pb-5">
+                  <div>
+                    <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">ACCOUNT INFORMATION</span>
+                    <h2 className="mt-1.5 font-serif text-2xl">Personal details</h2>
+                    <p className="mt-1 text-xs text-[#817681]">Your name and email are connected to Google.</p>
+                  </div>
+                  <span className="rounded-full border border-[#e8dce7] bg-[#fbf7fa] px-3 py-1.5 text-[9px] font-semibold tracking-wide text-[#684768]">CUSTOMER ACCOUNT</span>
+                </div>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="flex min-w-0 items-center gap-3 rounded-xl border border-[#eee7e1] bg-white p-4">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f6eef4] text-[#684768]"><FiUser size={17} /></span>
+                    <div className="min-w-0"><p className="text-[9px] font-semibold tracking-[0.15em] text-[#918792]">FULL NAME</p><p className="mt-1 truncate text-sm font-medium">{user.name}</p></div>
+                  </div>
+                  <div className="flex min-w-0 items-center gap-3 rounded-xl border border-[#eee7e1] bg-white p-4">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f6eef4] text-[#684768]"><FiMail size={17} /></span>
+                    <div className="min-w-0"><p className="text-[9px] font-semibold tracking-[0.15em] text-[#918792]">EMAIL ADDRESS</p><p className="mt-1 break-all text-sm font-medium">{user.email}</p></div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 rounded-xl border border-[#eee7e1] bg-white p-4 sm:px-5">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f6eef4] text-[#684768]"><FiMail size={17} /></span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[9px] font-semibold tracking-[0.15em] text-[#918792]">EMAIL ADDRESS</p>
-                    <p className="mt-1 break-all text-sm font-medium">{user.email}</p>
-                  </div>
-                </div>
-              </div>
 
-              <div className="mt-7 flex flex-col justify-between gap-4 rounded-xl bg-[#f8f3f6] p-4 sm:flex-row sm:items-center sm:px-5">
-                <div>
-                  <p className="text-sm font-semibold">Ready to leave?</p>
-                  <p className="mt-1 text-xs text-[#817681]">You can sign back in anytime with Google.</p>
+                <div className="mt-3 rounded-xl border border-[#eee7e1] bg-white p-4 sm:p-5">
+                  {isEditingPhone ? (
+                    <form onSubmit={savePhone} className="space-y-3">
+                      <label htmlFor="profile-phone" className="block text-[9px] font-semibold tracking-[0.15em] text-[#918792]">PHONE NUMBER</label>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <input
+                          id="profile-phone"
+                          type="tel"
+                          autoComplete="tel"
+                          value={phoneDraft}
+                          onChange={(event) => setPhoneDraft(event.target.value)}
+                          placeholder="+91 98765 43210"
+                          className="min-h-11 min-w-0 flex-1 rounded-lg border border-[#d9cbd4] bg-[#fffdfa] px-3 text-sm outline-none transition focus:border-[#986d8f] focus:ring-2 focus:ring-[#986d8f]/15"
+                        />
+                        <div className="flex gap-2">
+                          <button type="submit" disabled={isSavingPhone} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-4 text-xs font-semibold text-white transition hover:bg-[#593153] disabled:opacity-60 sm:flex-none">
+                            {isSavingPhone ? "Saving…" : <><FiCheck size={15} /> Save</>}
+                          </button>
+                          <button type="button" onClick={() => { setPhoneDraft(profile.phoneNumber || ""); setPhoneError(""); setIsEditingPhone(false); }} className="min-h-11 rounded-lg border border-[#d9cbd4] px-4 text-xs font-semibold text-[#684768] hover:bg-[#f8f3f6]">Cancel</button>
+                        </div>
+                      </div>
+                      {phoneError && <p role="alert" className="text-xs text-[#a13d39]">{phoneError}</p>}
+                      <p className="text-[10px] text-[#918792]">Use an international format, for example +91 98765 43210.</p>
+                    </form>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f6eef4] text-[#684768]"><FiPhone size={17} /></span>
+                        <div className="min-w-0"><p className="text-[9px] font-semibold tracking-[0.15em] text-[#918792]">PHONE NUMBER</p><p className="mt-1 truncate text-sm font-medium">{profile.phoneNumber || "Add a phone number"}</p></div>
+                      </div>
+                      <button type="button" onClick={() => setIsEditingPhone(true)} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#e4d9e2] px-3 text-[11px] font-semibold text-[#684768] transition hover:bg-[#f6eef4]">
+                        <FiEdit2 size={13} /> {profile.phoneNumber ? "Edit" : "Add phone"}
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={requestLogout}
-                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#cbb8c8] bg-white px-4 text-xs font-semibold text-[#30172f] transition hover:border-[#30172f] hover:bg-[#fdf9fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#986d8f]"
-                >
-                  <FiLogOut size={15} /> Log out
-                </button>
-              </div>
+              </section>
+
+              <section className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
+                <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#eee7e1] pb-5">
+                  <div>
+                    <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">DELIVERY INFORMATION</span>
+                    <h2 className="mt-1.5 font-serif text-2xl">Saved addresses</h2>
+                    <p className="mt-1 text-xs text-[#817681]">Keep your delivery details ready for your next order.</p>
+                  </div>
+                  <button type="button" onClick={beginCreateAddress} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-4 text-xs font-semibold text-white transition hover:bg-[#593153]">
+                    <FiPlus size={15} /> Add address
+                  </button>
+                </div>
+
+                {profile.addresses.length ? (
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    {profile.addresses.map((address) => (
+                      <article key={address._id} className={`rounded-xl border p-4 transition ${address.isDefault ? "border-[#c8aec5] bg-[#fcf8fb]" : "border-[#eee7e1] bg-white"}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f6eef4] text-[#684768]"><FiHome size={15} /></span>
+                            <div className="min-w-0">
+                              <h3 className="truncate text-sm font-semibold">{address.label || "Address"}</h3>
+                              {address.isDefault && <span className="mt-1 inline-flex rounded-full bg-[#edf4ee] px-2 py-0.5 text-[8px] font-semibold tracking-wide text-[#54745f]">DEFAULT</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="mt-3 min-h-[60px] text-xs leading-5 text-[#716a73]">{addressSummary(address)}</p>
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#eee7e1] pt-3">
+                          <div className="flex gap-1.5">
+                            {!address.isDefault && <button type="button" onClick={() => void setDefaultAddress(address._id)} className="rounded-md px-2 py-1.5 text-[10px] font-semibold text-[#684768] hover:bg-[#f6eef4]">Make default</button>}
+                            <button type="button" onClick={() => beginEditAddress(address)} aria-label={`Edit ${address.label} address`} className="grid h-8 w-8 place-items-center rounded-md text-[#684768] hover:bg-[#f6eef4]"><FiEdit2 size={14} /></button>
+                          </div>
+                          <button type="button" onClick={() => setPendingDelete(address)} aria-label={`Delete ${address.label} address`} className="grid h-8 w-8 place-items-center rounded-md text-[#9b504d] hover:bg-[#fbefed]"><FiTrash2 size={14} /></button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-xl border border-dashed border-[#d9cbd4] bg-white px-5 py-10 text-center">
+                    <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#f6eef4] text-[#684768]"><FiMapPin size={19} /></span>
+                    <h3 className="mt-3 font-serif text-xl">No saved addresses yet</h3>
+                    <p className="mt-1 text-xs text-[#817681]">Add an address so your delivery details are ready when you shop.</p>
+                    <button type="button" onClick={beginCreateAddress} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#cbb8c8] bg-white px-4 text-xs font-semibold text-[#684768] transition hover:bg-[#f6eef4]"><FiPlus size={14} /> Add your first address</button>
+                  </div>
+                )}
+              </section>
             </div>
+          </div>
+        ) : isOwnProfile && loadError ? (
+          <div className="mx-auto max-w-xl rounded-2xl border border-[#eadfd8] bg-[#fffdfa] px-6 py-10 text-center shadow-xl">
+            <h2 className="font-serif text-2xl">We couldn’t load your profile</h2>
+            <p role="alert" className="mt-2 text-sm text-[#777078]">{loadError}</p>
+            <button type="button" onClick={() => void loadProfile()} className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#30172f] px-4 text-xs font-semibold text-white"><FiRefreshCw size={14} /> Try again</button>
           </div>
         ) : (
           <div className="mx-auto max-w-xl rounded-2xl border border-[#eadfd8] bg-[#fffdfa] px-6 py-10 text-center shadow-[0_16px_44px_rgba(43,27,38,0.11)] sm:px-10">
@@ -135,25 +463,76 @@ export default function Profile({ email }: { email: string }) {
               {user ? "For your privacy, you can only view the profile connected to your signed-in account." : "Your profile is available after you sign in with the Google account connected to this email."}
             </p>
             {user ? (
-              <button
-                type="button"
-                onClick={() => router.replace(`/me/${encodeURIComponent(user.email)}`)}
-                className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-5 text-xs font-semibold text-white transition hover:bg-[#593153]"
-              >
+              <button type="button" onClick={() => router.replace(`/me/${encodeURIComponent(user.email)}`)} className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-5 text-xs font-semibold text-white transition hover:bg-[#593153]">
                 Open my profile <FiArrowRight size={15} />
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={openSignIn}
-                className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-5 text-xs font-semibold text-white transition hover:bg-[#593153]"
-              >
+              <button type="button" onClick={openSignIn} className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-5 text-xs font-semibold text-white transition hover:bg-[#593153]">
                 <FiLogIn size={15} /> Login / Sign up
               </button>
             )}
           </div>
         )}
       </section>
+
+      {isAddressEditorOpen && (
+        <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-[#211821]/65 px-4 py-6 backdrop-blur-[3px]">
+          <section role="dialog" aria-modal="true" aria-labelledby="address-dialog-title" className="relative my-auto w-full max-w-2xl rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 text-[#302531] shadow-2xl sm:p-7">
+            <button type="button" onClick={() => setIsAddressEditorOpen(false)} aria-label="Close address form" className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-[#756875] transition hover:bg-[#f3edf1]"><FiX size={17} /></button>
+            <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">DELIVERY DETAILS</span>
+            <h2 id="address-dialog-title" className="mt-1 font-serif text-2xl">{editingAddressId ? "Edit address" : "Add a new address"}</h2>
+            <p className="mt-1 text-xs text-[#817681]">Enter the delivery details for this address.</p>
+            {addressError && <p role="alert" className="mt-3 rounded-lg bg-[#fbefed] px-3 py-2 text-xs text-[#9b3935]">{addressError}</p>}
+
+            <form onSubmit={saveAddress} className="mt-5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {addressFields.map((field) => (
+                  <label key={field.name} className={`block ${field.wide ? "sm:col-span-2" : ""}`}>
+                    <span className="mb-1.5 block text-[10px] font-semibold text-[#5e515f]">{field.label}{field.required && <span className="ml-1 text-[#a13d39]">*</span>}</span>
+                    <input
+                      required={field.required}
+                      maxLength={field.name === "pincode" ? 6 : undefined}
+                      inputMode={field.name === "pincode" ? "numeric" : undefined}
+                      pattern={field.name === "pincode" ? "[0-9]{6}" : undefined}
+                      value={String(addressDraft[field.name] ?? "")}
+                      onChange={(event) => setAddressDraft((current) => ({ ...current, [field.name]: event.target.value }))}
+                      placeholder={field.placeholder}
+                      className="min-h-11 w-full rounded-lg border border-[#d9cbd4] bg-white px-3 text-sm outline-none transition placeholder:text-[#b0a6af] focus:border-[#986d8f] focus:ring-2 focus:ring-[#986d8f]/15"
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <label className="mt-4 flex cursor-pointer items-center gap-2 text-xs text-[#5e515f]">
+                <input type="checkbox" checked={addressDraft.isDefault} onChange={(event) => setAddressDraft((current) => ({ ...current, isDefault: event.target.checked }))} className="h-4 w-4 accent-[#684768]" />
+                Set as my default delivery address
+              </label>
+              <div className="mt-6 flex flex-col-reverse justify-end gap-2 border-t border-[#eee7e1] pt-4 sm:flex-row">
+                <button type="button" onClick={() => setIsAddressEditorOpen(false)} className="min-h-11 rounded-lg border border-[#d9cbd4] px-5 text-xs font-semibold text-[#684768] transition hover:bg-[#f8f3f6]">Cancel</button>
+                <button type="submit" disabled={isSavingAddress} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-5 text-xs font-semibold text-white transition hover:bg-[#593153] disabled:cursor-wait disabled:opacity-60">
+                  {isSavingAddress ? <><FiRefreshCw className="animate-spin" size={14} /> Saving…</> : <><FiCheck size={15} /> Save address</>}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {pendingDelete && (
+        <div className="fixed inset-0 z-[110] grid place-items-center bg-[#211821]/65 px-5 py-8 backdrop-blur-[3px]">
+          <section role="alertdialog" aria-modal="true" aria-labelledby="delete-address-title" className="w-full max-w-[390px] rounded-2xl border border-[#eadfd8] bg-[#fffdfa] px-7 py-7 text-center shadow-2xl">
+            <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#fbefed] text-[#9b504d]"><FiTrash2 size={19} /></span>
+            <h2 id="delete-address-title" className="mt-4 font-serif text-2xl">Remove this address?</h2>
+            <p className="mt-2 text-sm leading-5 text-[#777078]">“{pendingDelete.label}” will be removed from your saved addresses.</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button type="button" disabled={isDeletingAddress} onClick={() => setPendingDelete(null)} className="min-h-11 rounded-lg border border-[#cbb8c8] text-xs font-semibold text-[#30172f] transition hover:bg-[#f6eef4] disabled:opacity-60">Keep address</button>
+              <button type="button" disabled={isDeletingAddress} onClick={() => void deleteAddress()} className="min-h-11 rounded-lg bg-[#8e3936] text-xs font-semibold text-white transition hover:bg-[#762d2b] disabled:opacity-60">{isDeletingAddress ? "Removing…" : "Remove"}</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      <div aria-live="polite" className={`fixed bottom-5 left-1/2 z-[120] max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-full bg-[#30172f] px-5 py-3 text-center text-[11px] text-white shadow-xl transition-all ${notice ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"}`}>{notice}</div>
     </main>
   );
 }
