@@ -13,31 +13,37 @@ const categories = [
     name: "Banarshi Sarees",
     note: "Elegant & timeless",
     image: banarshiSaree,
+    href: "/category/saree/banarshi",
   },
   {
     name: "Cotton Sarees",
     note: "Comfort & charm",
     image: cottonSaree,
+    href: "/category/saree/cotton",
   },
   {
     name: "Georgette Sarees",
     note: "Light & graceful",
     image: georgetteSaree,
+    href: "/category/saree/georgette",
   },
   {
     name: "Rajasthani Suits",
     note: "Royal tradition",
     image: rajputiPoshak,
+    href: "/category/rajputi-poshak/traditional-poshak",
   },
   {
     name: "Sharara Suits",
     note: "For special moments",
     image: ShararaSuit,
+    href: "/category/suit/sharara-sets",
   },
   {
     name: "Festive & Occasion",
     note: "Handcrafted beauty",
     image: FestiveSaree,
+    href: "/category/saree/festival",
   },
 ];
 
@@ -67,8 +73,8 @@ export default function Popular() {
         </div>
         <div className="grid grid-cols-3 gap-x-2 gap-y-5 md:grid-cols-6 md:gap-5">
           {categories.map((category) => (
-            <a
-              href="#shop"
+            <Link
+              href={category.href}
               key={category.name}
               className="flex flex-col items-center text-center"
             >
@@ -83,7 +89,7 @@ export default function Popular() {
               <span className="mt-1 text-[7px] text-muted md:text-[8px]">
                 {category.note}
               </span>
-            </a>
+            </Link>
           ))}
         </div>
       </section>
