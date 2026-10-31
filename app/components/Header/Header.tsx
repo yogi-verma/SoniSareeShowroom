@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FiBookmark, FiChevronRight, FiLogIn, FiSearch, FiShield, FiShoppingBag, FiUser } from "react-icons/fi";
+import { FiChevronRight, FiLogIn, FiShield, FiShoppingBag, FiUser } from "react-icons/fi";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminLoginModal from "../../../admin/component/AdminLoginModal";
 import { getLoggedInAdmin } from "../../../admin/utils/adminApi";
 import { useAuth } from "../Auth/AuthProvider";
+import SearchBar from "../SearchBar/SearchBar";
 
 const navigation = [
   { label: "Home", href: "/" },
@@ -95,14 +96,7 @@ export default function Header() {
         <Navigation />
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            aria-label="Search the collection"
-            title="Search"
-            className="grid h-10 w-10 place-items-center rounded-full text-white/90 transition hover:bg-white/10 hover:text-white"
-          >
-            <FiSearch aria-hidden="true" size={18} strokeWidth={1.6} />
-          </button>
+          <SearchBar />
           
 
           <button

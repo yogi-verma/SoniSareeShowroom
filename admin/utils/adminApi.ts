@@ -144,8 +144,12 @@ export type ProductInput = Omit<Product, "_id" | "photo" | "additionalPhotos" | 
   additionalPhotos?: File[];
 };
 
+export type ProductUpdateInput = Omit<ProductInput, "photo"> & {
+  photo?: File;
+};
+
 type AdminRequestOptions = {
-  method: "GET" | "POST" | "PATCH";
+  method: "GET" | "POST" | "PATCH" | "DELETE";
   body?: Record<string, unknown> | FormData;
 };
 
@@ -248,19 +252,35 @@ export function getProducts() {
 }
 
 export function createProduct(product: ProductInput) {
+  const body = productFormData(product);
+
+  return sendAdminRequest<{ message: string; product: Product }>("/api/admin/products", {
+    method: "POST",
+    body,
+  });
+}
+
+function productFormData(product: ProductUpdateInput) {
   const body = new FormData();
   body.append("productType", product.productType);
   body.append("category", product.category);
   body.append("name", product.name);
   body.append("price", String(product.price));
   body.append("stock", String(product.stock));
-  body.append("photo", product.photo);
+  if (product.photo) body.append("photo", product.photo);
   product.additionalPhotos?.forEach((photo) => body.append("additionalPhotos", photo));
+  return body;
+}
 
-  return sendAdminRequest<{ message: string; product: Product }>("/api/admin/products", {
-    method: "POST",
-    body,
+export function updateProduct(productId: string, product: ProductUpdateInput) {
+  return sendAdminRequest<{ message: string; product: Product }>(`/api/admin/products/${encodeURIComponent(productId)}`, {
+    method: "PATCH",
+    body: productFormData(product),
   });
+}
+
+export function deleteProduct(productId: string) {
+  return sendAdminRequest<{ message: string }>(`/api/admin/products/${encodeURIComponent(productId)}`, { method: "DELETE" });
 }
 
 export type { Admin, AdminAuthResponse };

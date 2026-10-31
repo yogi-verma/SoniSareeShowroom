@@ -8,15 +8,18 @@ import {
   FiCheck,
   FiChevronDown,
   FiImage,
+  FiMoreVertical,
+  FiEdit2,
   FiLoader,
   FiPackage,
   FiPlus,
   FiRefreshCw,
   FiSearch,
   FiUploadCloud,
+  FiTrash2,
   FiX,
 } from "react-icons/fi";
-import { createProduct, getProducts } from "../../../utils/adminApi";
+import { createProduct, deleteProduct, getProducts, updateProduct } from "../../../utils/adminApi";
 import type { Product, ProductCategory, ProductType } from "../../../utils/adminApi";
 import { useAccessibleDialog } from "../useAccessibleDialog";
 
@@ -150,7 +153,12 @@ export default function Inventory() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [openProductMenuId, setOpenProductMenuId] = useState<string | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState("");
@@ -161,6 +169,23 @@ export default function Inventory() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const additionalFileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useAccessibleDialog(isModalOpen, isSaving, closeModal);
+  const deleteDialogRef = useAccessibleDialog(Boolean(productToDelete), isDeleting, closeDeleteConfirmation);
+
+  useEffect(() => {
+    if (!openProductMenuId) return;
+    function closeMenu(event: PointerEvent) {
+      if (!(event.target instanceof Element) || !event.target.closest("[data-product-menu]")) setOpenProductMenuId(null);
+    }
+    function closeMenuOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpenProductMenuId(null);
+    }
+    document.addEventListener("pointerdown", closeMenu);
+    document.addEventListener("keydown", closeMenuOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeMenu);
+      document.removeEventListener("keydown", closeMenuOnEscape);
+    };
+  }, [openProductMenuId]);
 
   const loadProducts = useCallback(async () => {
     setIsLoading(true);
@@ -222,7 +247,13 @@ export default function Inventory() {
   function closeModal() {
     if (isSaving) return;
     setIsModalOpen(false);
+    setEditingProduct(null);
     setFormError("");
+  }
+
+  function closeDeleteConfirmation() {
+    if (isDeleting) return;
+    setProductToDelete(null);
   }
 
   function resetForm() {
@@ -232,10 +263,53 @@ export default function Inventory() {
     if (additionalFileInputRef.current) additionalFileInputRef.current.value = "";
   }
 
+  function openAddModal() {
+    resetForm();
+    setEditingProduct(null);
+    setFormError("");
+    setIsModalOpen(true);
+  }
+
+  function openEditModal(product: Product) {
+    setOpenProductMenuId(null);
+    setEditingProduct(product);
+    setForm({
+      productType: product.productType,
+      category: product.category,
+      name: product.name,
+      price: String(product.price),
+      stock: String(product.stock),
+      photo: null,
+      additionalPhotos: [],
+    });
+    setPhotoPreview(product.photo?.url ?? "");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (additionalFileInputRef.current) additionalFileInputRef.current.value = "";
+    setFormError("");
+    setIsModalOpen(true);
+  }
+
+  async function confirmDeleteProduct() {
+    if (!productToDelete) return;
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteProduct(productToDelete._id);
+      setProducts((current) => current.filter((product) => product._id !== productToDelete._id));
+      setNotice(`${productToDelete.name} deleted from inventory.`);
+      setProductToDelete(null);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Could not delete this product.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   function handleAdditionalPhotosChange(files: FileList | null) {
     const selected = Array.from(files ?? []);
-    if (form.additionalPhotos.length + selected.length > 4) {
-      setFormError("Choose up to 4 additional photos in total.");
+    const existingPhotoCount = editingProduct?.additionalPhotos?.length ?? 0;
+    if (existingPhotoCount + form.additionalPhotos.length + selected.length > 4) {
+      setFormError(`This product can have up to 4 additional photos. ${existingPhotoCount} already exist.`);
       if (additionalFileInputRef.current) additionalFileInputRef.current.value = "";
       return;
     }
@@ -279,26 +353,33 @@ export default function Inventory() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
-    if (!form.productType || !form.category || !form.photo) {
-      setFormError("Choose a product type, a category, and a product photo.");
+    if (!form.productType || !form.category || (!editingProduct && !form.photo)) {
+      setFormError("Choose a product type, a category, and a main product photo.");
       return;
     }
 
     setIsSaving(true);
     try {
-      const result = await createProduct({
+      const productFields = {
         productType: form.productType,
         category: form.category,
         name: form.name.trim(),
         price: Number(form.price),
         stock: Number(form.stock),
-        photo: form.photo,
         additionalPhotos: form.additionalPhotos,
-      });
-      setProducts((current) => [result.product, ...current]);
-      setNotice("Product added to inventory.");
+      };
+      if (editingProduct) {
+        const result = await updateProduct(editingProduct._id, { ...productFields, ...(form.photo ? { photo: form.photo } : {}) });
+        setProducts((current) => current.map((product) => product._id === result.product._id ? result.product : product));
+        setNotice("Product updated successfully.");
+      } else {
+        const result = await createProduct({ ...productFields, photo: form.photo! });
+        setProducts((current) => [result.product, ...current]);
+        setNotice("Product added to inventory.");
+      }
       setIsModalOpen(false);
       resetForm();
+      setEditingProduct(null);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Could not add this product.");
     } finally {
@@ -338,7 +419,7 @@ export default function Inventory() {
             onChange={(value) => setTypeFilter(value as ProductType | "all")}
           />
         </div>
-        <button type="button" onClick={() => { resetForm(); setFormError(""); setIsModalOpen(true); }} aria-label="Add product" title="Add product" className="admin-button-primary h-10 w-10 shrink-0 px-0 sm:w-auto sm:px-4">
+        <button type="button" onClick={openAddModal} aria-label="Add product" title="Add product" className="admin-button-primary h-10 w-10 shrink-0 px-0 sm:w-auto sm:px-4">
           <FiPlus size={17} aria-hidden="true" /><span className="hidden sm:inline">Add product</span>
         </button>
       </div>
@@ -362,13 +443,20 @@ export default function Inventory() {
             <div><span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#f7f3f6] text-plum"><FiPackage size={21} /></span>
               <h3 className="mt-3 font-serif text-lg text-[var(--admin-charcoal)]">{products.length ? "No matching products" : "Your inventory is ready"}</h3>
               <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--admin-muted)]">{products.length ? "Try a different search or product type." : "Add your first design to start keeping track of stock."}</p>
-              {!products.length && <button type="button" onClick={() => setIsModalOpen(true)} className="admin-button-primary mt-4"><FiPlus size={15} /> Add your first product</button>}
+              {!products.length && <button type="button" onClick={openAddModal} className="admin-button-primary mt-4"><FiPlus size={15} /> Add your first product</button>}
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {visibleProducts.map((product) => (
-              <article key={product._id} className="group min-w-0 overflow-hidden rounded-lg border border-[var(--admin-border)] bg-white transition hover:-translate-y-0.5 hover:shadow-[var(--admin-shadow-panel)]">
+              <article key={product._id} className="group relative min-w-0 overflow-hidden rounded-lg border border-[var(--admin-border)] bg-white transition hover:-translate-y-0.5 hover:shadow-[var(--admin-shadow-panel)]">
+                <div data-product-menu className="absolute right-2 top-2 z-20">
+                  <button type="button" aria-label={`Actions for ${product.name}`} aria-haspopup="menu" aria-expanded={openProductMenuId === product._id} onClick={() => setOpenProductMenuId((current) => current === product._id ? null : product._id)} className="grid h-6 w-6 place-items-center rounded-full border border-white/80 bg-white/95 text-[#514852] shadow-sm transition hover:bg-white hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/50"><FiMoreVertical size={17} /></button>
+                  {openProductMenuId === product._id && <div role="menu" aria-label={`Actions for ${product.name}`} className="absolute right-0 top-9 w-36 rounded-xl border border-[var(--admin-border)] bg-white p-1.5 shadow-[0_12px_32px_rgba(41,35,43,0.2)]">
+                    <button type="button" role="menuitem" onClick={() => openEditModal(product)} className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-medium text-[var(--admin-charcoal)] transition hover:bg-[#f6eef4]"><FiEdit2 size={14} className="text-plum" /> Edit product</button>
+                    <button type="button" role="menuitem" onClick={() => { setOpenProductMenuId(null); setProductToDelete(product); setDeleteError(""); }} className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-medium text-[#a13d39] transition hover:bg-[#fff1f0]"><FiTrash2 size={14} /> Delete product</button>
+                  </div>}
+                </div>
                 <div className="relative aspect-[4/3] overflow-hidden bg-[#f6f2ed]">
                   <img src={product.photo.url} alt={product.name} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
                   <span className="absolute left-1.5 top-1.5 rounded-full border border-white/70 bg-white/90 px-2 py-0.5 text-[8px] font-semibold capitalize text-[#514852] shadow-sm sm:left-2 sm:top-2 sm:text-[9px]">{product.productType}</span>
@@ -390,10 +478,10 @@ export default function Inventory() {
 
       {isModalOpen && (
         <div className="admin-modal-backdrop admin-centered-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeModal(); }}>
-          <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="inventory-form-title" aria-describedby="inventory-form-description" className="admin-modal max-w-xl p-5 sm:p-6">
+          <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="inventory-form-title" aria-describedby="inventory-form-description" className="admin-modal max-h-[90vh] max-w-xl overflow-y-auto p-5 sm:p-6">
             <div className="flex items-start justify-between gap-4">
-              <div><p className="admin-page-kicker mb-1">New arrival</p><h2 id="inventory-form-title" className="font-serif text-2xl text-[var(--admin-charcoal)]">Add a product</h2><p id="inventory-form-description" className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">Add the design details, stock count, and a clear product photo.</p></div>
-              <button type="button" onClick={closeModal} disabled={isSaving} aria-label="Close add product form" className="admin-icon-button -mr-2 -mt-2 disabled:opacity-50"><FiX size={18} /></button>
+              <div><p className="admin-page-kicker mb-1">{editingProduct ? "Update listing" : "New arrival"}</p><h2 id="inventory-form-title" className="font-serif text-2xl text-[var(--admin-charcoal)]">{editingProduct ? "Edit product" : "Add a product"}</h2><p id="inventory-form-description" className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">{editingProduct ? "Update product details or replace/add photos." : "Add the design details, stock count, and a clear product photo."}</p></div>
+              <button type="button" onClick={closeModal} disabled={isSaving} aria-label="Close product form" className="admin-icon-button -mr-2 -mt-2 disabled:opacity-50"><FiX size={18} /></button>
             </div>
 
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
@@ -407,32 +495,52 @@ export default function Inventory() {
                 <label><span className="admin-field-label">Stock quantity <span className="text-[#a13d39]">*</span></span><input required type="number" min="0" step="1" value={form.stock} onChange={(event) => setForm((current) => ({ ...current, stock: event.target.value }))} className={fieldClass} placeholder="0" /></label>
               </div>
               <div>
-                <span className="admin-field-label">Product photo <span className="text-[#a13d39]">*</span></span>
+                <span className="admin-field-label">Main product photo {!editingProduct && <span className="text-[#a13d39]">*</span>}{editingProduct && <span className="font-normal text-[var(--admin-subtle)]">(optional)</span>}</span>
                 <input ref={fileInputRef} type="file" accept="image/*" aria-label="Product photo" className="sr-only" onChange={(event) => handlePhotoChange(event.target.files?.[0])} />
                 <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full items-center gap-3 rounded-xl border border-dashed border-[var(--admin-border-strong)] bg-[#fcfbf9] p-3 text-left transition hover:border-[#b99bb5] hover:bg-[#fbf7fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/30">
-                  {photoPreview ? <img src={photoPreview} alt="Selected product preview" className="h-14 w-14 rounded-lg object-cover" /> : <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-[#f3ebf2] text-plum"><FiUploadCloud size={20} /></span>}
-                  <span className="min-w-0"><span className="block truncate text-xs font-semibold text-[var(--admin-charcoal)]">{form.photo?.name ?? "Choose a product image"}</span><span className="mt-1 block text-[10px] text-[var(--admin-subtle)]">JPG, PNG, or WebP · up to 5 MB</span></span>
+                  {photoPreview ? <img src={photoPreview} alt={form.photo ? "Selected main product photo preview" : "Current main product photo"} className="h-14 w-14 rounded-lg object-cover" /> : <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-[#f3ebf2] text-plum"><FiUploadCloud size={20} /></span>}
+                  <span className="min-w-0"><span className="block truncate text-xs font-semibold text-[var(--admin-charcoal)]">{form.photo?.name ?? (editingProduct ? "Current main photo · unchanged unless replaced" : "Choose a product image")}</span><span className="mt-1 block text-[10px] text-[var(--admin-subtle)]">JPG, PNG, or WebP · up to 5 MB</span></span>
                   <FiImage className="ml-auto shrink-0 text-[var(--admin-subtle)]" size={17} />
                 </button>
               </div>
               <div>
-                <span className="admin-field-label">Additional photos <span className="font-normal text-[var(--admin-subtle)]">(optional · up to 4)</span></span>
+                <span className="admin-field-label">Additional photos <span className="font-normal text-[var(--admin-subtle)]">(optional · {Math.max(0, 4 - (editingProduct?.additionalPhotos?.length ?? 0))} remaining)</span></span>
                 <input ref={additionalFileInputRef} type="file" accept="image/*" multiple aria-label="Additional product photos" className="sr-only" onChange={(event) => handleAdditionalPhotosChange(event.target.files)} />
-                <button type="button" disabled={form.additionalPhotos.length >= 4} onClick={() => additionalFileInputRef.current?.click()} className="flex w-full items-center gap-3 rounded-xl border border-dashed border-[var(--admin-border-strong)] bg-[#fcfbf9] p-3 text-left transition hover:border-[#b99bb5] hover:bg-[#fbf7fb] disabled:cursor-not-allowed disabled:opacity-60">
+                <button type="button" disabled={form.additionalPhotos.length + (editingProduct?.additionalPhotos?.length ?? 0) >= 4} onClick={() => additionalFileInputRef.current?.click()} className="flex w-full items-center gap-3 rounded-xl border border-dashed border-[var(--admin-border-strong)] bg-[#fcfbf9] p-3 text-left transition hover:border-[#b99bb5] hover:bg-[#fbf7fb] disabled:cursor-not-allowed disabled:opacity-60">
                   <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[#f3ebf2] text-plum"><FiImage size={19} /></span>
-                  <span><span className="block text-xs font-semibold text-[var(--admin-charcoal)]">Choose more photos</span><span className="mt-1 block text-[10px] text-[var(--admin-subtle)]">Select multiple images · {form.additionalPhotos.length}/4 · up to 5 MB each</span></span>
+                  <span><span className="block text-xs font-semibold text-[var(--admin-charcoal)]">Choose more photos</span><span className="mt-1 block text-[10px] text-[var(--admin-subtle)]">Select multiple images · {(editingProduct?.additionalPhotos?.length ?? 0) + form.additionalPhotos.length}/4 · up to 5 MB each</span></span>
                   <FiUploadCloud className="ml-auto shrink-0 text-[var(--admin-subtle)]" size={17} />
                 </button>
-                {!!form.additionalPhotos.length && <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">{form.additionalPhotos.map((file, index) => <li key={`${file.name}-${index}`} className="relative min-w-0 overflow-hidden rounded-lg border border-[var(--admin-border)] bg-white"><img src={additionalPhotoPreviews[index]} alt={`Additional product photo ${index + 1}`} className="aspect-square w-full object-cover" /><button type="button" onClick={() => removeAdditionalPhoto(index)} aria-label={`Remove ${file.name}`} className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-[#6c536b] shadow"><FiX size={14} /></button><span className="block truncate px-2 py-1 text-[9px] text-[var(--admin-muted)]">{file.name}</span></li>)}</ul>}
+                {!!(editingProduct?.additionalPhotos?.length || form.additionalPhotos.length) && <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">{(editingProduct?.additionalPhotos ?? []).map((photo, index) => <li key={photo.publicId} className="relative min-w-0 overflow-hidden rounded-lg border border-[var(--admin-border)] bg-white"><img src={photo.url} alt={`Existing additional product photo ${index + 1}`} className="aspect-square w-full object-cover" /><span className="block truncate px-2 py-1 text-[9px] text-[var(--admin-muted)]">Current photo</span></li>)}{form.additionalPhotos.map((file, index) => <li key={`${file.name}-${index}`} className="relative min-w-0 overflow-hidden rounded-lg border border-[var(--admin-border)] bg-white"><img src={additionalPhotoPreviews[index]} alt={`Additional product photo ${index + 1}`} className="aspect-square w-full object-cover" /><button type="button" onClick={() => removeAdditionalPhoto(index)} aria-label={`Remove ${file.name}`} className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-[#6c536b] shadow"><FiX size={14} /></button><span className="block truncate px-2 py-1 text-[9px] text-[var(--admin-muted)]">{file.name}</span></li>)}</ul>}
               </div>
 
               {formError && <p role="alert" className="rounded-lg border border-[#f0d8d6] bg-[#fff6f5] px-3 py-2.5 text-xs leading-5 text-[#a13d39]">{formError}</p>}
 
               <div className="flex flex-col-reverse gap-2 border-t border-[var(--admin-border)] pt-4 sm:flex-row sm:justify-end">
                 <button type="button" onClick={closeModal} disabled={isSaving} className="admin-button-secondary sm:min-w-28">Cancel</button>
-                <button type="submit" disabled={isSaving} className="admin-button-primary sm:min-w-36">{isSaving ? <><FiLoader className="animate-spin" size={15} /> Saving product…</> : <><FiPlus size={15} /> Save product</>}</button>
+                <button type="submit" disabled={isSaving} className="admin-button-primary sm:min-w-36">{isSaving ? <><FiLoader className="animate-spin" size={15} /> Saving product…</> : editingProduct ? <><FiCheck size={15} /> Save changes</> : <><FiPlus size={15} /> Save product</>}</button>
               </div>
             </form>
+          </section>
+        </div>
+      )}
+
+      {productToDelete && (
+        <div className="admin-modal-backdrop admin-centered-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isDeleting) setProductToDelete(null); }}>
+          <section ref={deleteDialogRef} role="alertdialog" aria-modal="true" aria-labelledby="delete-product-title" aria-describedby="delete-product-description" className="admin-modal max-w-md p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#fff0ef] text-[#a13d39]"><FiTrash2 size={18} /></span>
+              <div className="min-w-0 flex-1">
+                <h2 id="delete-product-title" className="font-serif text-xl text-[var(--admin-charcoal)]">Delete this product?</h2>
+                <p id="delete-product-description" className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">Are you sure you want to delete <span className="font-semibold text-[var(--admin-charcoal)]">{productToDelete.name}</span>? This will remove it from inventory and the storefront.</p>
+              </div>
+              <button type="button" disabled={isDeleting} onClick={closeDeleteConfirmation} aria-label="Close delete confirmation" className="admin-icon-button -mr-2 -mt-2 disabled:opacity-50"><FiX size={17} /></button>
+            </div>
+            {deleteError && <p role="alert" className="mt-4 rounded-lg border border-[#f0d8d6] bg-[#fff6f5] px-3 py-2.5 text-xs leading-5 text-[#a13d39]">{deleteError}</p>}
+            <div className="mt-5 flex flex-col-reverse gap-2 border-t border-[var(--admin-border)] pt-4 sm:flex-row sm:justify-end">
+              <button type="button" disabled={isDeleting} onClick={closeDeleteConfirmation} className="admin-button-secondary sm:min-w-24">No, keep it</button>
+              <button type="button" disabled={isDeleting} onClick={() => void confirmDeleteProduct()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#a13d39] px-4 text-xs font-semibold text-white transition hover:bg-[#87322f] disabled:cursor-wait disabled:opacity-60 sm:min-w-32">{isDeleting ? <><FiLoader size={14} className="animate-spin" /> Deleting…</> : <><FiTrash2 size={14} /> Yes, delete</>}</button>
+            </div>
           </section>
         </div>
       )}
