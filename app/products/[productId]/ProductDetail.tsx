@@ -68,7 +68,7 @@ export default function ProductDetail({ productId }: { productId: string }) {
     try {
       if (action === "buy") {
         await openProductCheckout(product._id, { name: user.name, email: user.email }, {
-          onVerified: (status, message) => setNotice(status === "paid" ? "Payment successful. Your order is confirmed." : message || "Payment authorized and awaiting confirmation."),
+          onVerified: (status, message) => setNotice(status === "paid" ? "Payment successful. Your order is pending and should arrive within 10 days." : message || "Payment authorized and awaiting confirmation."),
           onFailure: setNotice,
           onDismiss: () => setNotice("Checkout was closed. No payment was confirmed."),
         });

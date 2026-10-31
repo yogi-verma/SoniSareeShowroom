@@ -77,7 +77,7 @@ export default function BestSellers() {
     setMessage("");
     try {
       await openProductCheckout(product._id, { name: user.name, email: user.email }, {
-        onVerified: (status) => setMessage(status === "paid" ? `Payment successful · ${product.name}` : "Payment authorized and awaiting confirmation."),
+        onVerified: (status) => setMessage(status === "paid" ? `Paid · ${product.name} should arrive within 10 days.` : "Payment authorized and awaiting confirmation."),
         onFailure: setMessage,
         onDismiss: () => setMessage("Checkout was closed. No payment was confirmed."),
       });

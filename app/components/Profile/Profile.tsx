@@ -422,7 +422,7 @@ export default function Profile({ email }: { email: string }) {
     setIsStartingCartCheckout(true);
     try {
       await openCartCheckout({ name: user.name, email: user.email }, {
-        onVerified: (status) => setNotice(status === "paid" ? "Payment successful. Your cart order is confirmed." : "Payment authorized and awaiting confirmation."),
+        onVerified: (status) => setNotice(status === "paid" ? "Payment successful. Your order is pending and should arrive within 10 days." : "Payment authorized and awaiting confirmation."),
         onFailure: setNotice,
         onDismiss: () => setNotice("Checkout was closed. No payment was confirmed."),
       });
@@ -648,7 +648,7 @@ export default function Profile({ email }: { email: string }) {
                     <article className="overflow-hidden rounded-xl border border-[#eee7e1] bg-white">
                       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee7e1] bg-[#fcf8fb] px-4 py-3 sm:px-5">
                         <div><p className="text-[9px] font-semibold tracking-[0.16em] text-[#986d8f]">ORDER DETAILS</p><p className="mt-1 text-[10px] text-[#817681]">Placed {new Date(selectedOrder.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p></div>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#edf4ee] px-3 py-1.5 text-[9px] font-semibold text-[#54745f]"><FiCheckCircle size={12} /> PAYMENT SUCCESSFUL</span>
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-semibold ${selectedOrder.deliveryStatus === "delivered" ? "bg-[#edf4ee] text-[#54745f]" : "bg-[#fff5e8] text-[#8b642f]"}`}><FiCheckCircle size={12} /> {selectedOrder.deliveryStatus === "delivered" ? "DELIVERED" : "DELIVERY PENDING"}</span>
                       </div>
                       <div className="grid gap-5 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_250px]">
                         <div className="space-y-3">
@@ -664,6 +664,7 @@ export default function Profile({ email }: { email: string }) {
                             </div>
                           ))}
                           <p className="text-right text-sm font-semibold text-[#30172f]">Total paid: {formatPrice(selectedOrder.totalAmount)}</p>
+                          <p className={`rounded-lg px-3 py-2 text-[10px] leading-4 ${selectedOrder.deliveryStatus === "delivered" ? "bg-[#edf4ee] text-[#54745f]" : "bg-[#fff8ed] text-[#8b642f]"}`}>{selectedOrder.deliveryStatus === "delivered" && selectedOrder.deliveredAt ? `Delivered on ${new Date(selectedOrder.deliveredAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.` : selectedOrder.deliveryMessage}</p>
                         </div>
                         <dl className="space-y-3 rounded-lg bg-[#faf7f2] p-4 text-[10px]">
                           <div><dt className="text-[#918792]">Order reference</dt><dd className="mt-0.5 break-all font-medium text-[#463847]">{selectedOrder.receipt}</dd></div>
@@ -687,7 +688,7 @@ export default function Profile({ email }: { email: string }) {
                           <p className="text-[7px] font-semibold uppercase tracking-[0.12em] text-[#986d8f]">{order.itemCount} {order.itemCount === 1 ? "item" : "items"}</p>
                           <h3 className="mt-0.5 line-clamp-1 font-serif text-sm text-[#302531]">{order.productName}</h3>
                           <p className="mt-1 text-[9px] text-[#817681]">{new Date(order.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · Qty {order.quantity}</p>
-                          <span className="mt-1 inline-flex items-center gap-1 text-[8px] font-semibold text-[#54745f]">Paid <FiArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" /></span>
+                          <span className={`mt-1 inline-flex items-center gap-1 text-[8px] font-semibold ${order.deliveryStatus === "delivered" ? "text-[#54745f]" : "text-[#8b642f]"}`}>{order.deliveryStatus === "delivered" ? "Delivered" : "Delivery pending"} <FiArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" /></span>
                         </div>
                         <p className="shrink-0 self-start text-[10px] font-semibold text-[#30172f]">{formatPrice(order.totalAmount)}</p>
                       </button>

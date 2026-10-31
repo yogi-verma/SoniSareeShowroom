@@ -25,6 +25,9 @@ export type OrderSummary = {
   totalAmount: number;
   currency: string;
   paymentStatus: "paid";
+  deliveryStatus: "pending" | "delivered";
+  deliveryMessage: string;
+  deliveredAt: string | null;
   paymentMethod: string;
   paidAt: string | null;
   placedAt: string;

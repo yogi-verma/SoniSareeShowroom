@@ -169,6 +169,16 @@
 }
 
 .admin-icon-button:hover { background: #f4f0f4; color: var(--admin-maroon); }
+.admin-bell-ringing { transform-origin: top center; animation: admin-bell-shake 850ms ease-in-out 3; }
+@keyframes admin-bell-shake {
+  0%, 100% { transform: rotate(0deg); }
+  12%, 36%, 60% { transform: rotate(12deg); }
+  24%, 48%, 72% { transform: rotate(-12deg); }
+  84% { transform: rotate(5deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-bell-ringing { animation: none; }
+}
 .admin-icon-button:focus-visible,
 .admin-button-primary:focus-visible,
 .admin-button-secondary:focus-visible,

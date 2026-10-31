@@ -149,15 +149,15 @@ export default function Hero() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <a
-              href="#shop"
-              className="group inline-flex min-h-12 items-center gap-8 rounded-sm bg-[#73456e] px-5 text-[10px] font-semibold tracking-[0.12em] text-white transition hover:bg-[#895a82] sm:px-6"
+          <a
+              href="/categories"
+              className="group inline-flex min-h-12 items-center gap-2 rounded-sm bg-[#73456e] px-4 text-[12px] font-semibold tracking-[0.12em] text-white transition hover:bg-[#895a82] sm:px-6"
             >
-              SHOP THE COLLECTION
+              SHOP NOW
               <FiArrowRight
                 aria-hidden="true"
-                className="transition-transform group-hover:translate-x-1"
-                size={15}
+                className="transition-transform font-semibold group-hover:translate-x-1"
+                size={16}
               />
             </a>
           </div>

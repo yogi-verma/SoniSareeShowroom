@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiActivity, FiAward, FiDollarSign, FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
-import { getPurchases, getSalesTransactions } from "../../../utils/adminApi";
+import { FiActivity, FiArrowRight, FiAward, FiBell, FiDollarSign, FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
+import { getAdminOrders, getPurchases, getSalesTransactions } from "../../../utils/adminApi";
 import type { Purchase, SalesTransaction } from "../../../utils/adminApi";
 import PendingSupplierPayments from "./PendingSupplierPayments";
 import SalesTrendChart from "./SalesTrendChart";
@@ -15,11 +15,27 @@ function formatPrice(amount: number) {
   }).format(amount);
 }
 
-export default function Overview({ adminName }: { adminName: string }) {
+export default function Overview({ adminName, onViewOrders }: { adminName: string; onViewOrders: () => void }) {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [transactions, setTransactions] = useState<SalesTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [pendingOrderCount, setPendingOrderCount] = useState(0);
+  const [isOrderCountLoading, setIsOrderCountLoading] = useState(true);
+  const [orderCountError, setOrderCountError] = useState("");
+
+  const loadPendingOrderCount = useCallback(async () => {
+    setIsOrderCountLoading(true);
+    setOrderCountError("");
+    try {
+      const result = await getAdminOrders();
+      setPendingOrderCount(result.pendingOrders);
+    } catch (error) {
+      setOrderCountError(error instanceof Error ? error.message : "Could not load pending orders.");
+    } finally {
+      setIsOrderCountLoading(false);
+    }
+  }, []);
 
   const loadOverview = useCallback(async () => {
     try {
@@ -53,6 +69,21 @@ export default function Overview({ adminName }: { adminName: string }) {
     return () => {
       isCurrent = false;
     };
+  }, []);
+
+  useEffect(() => {
+    let isCurrent = true;
+    getAdminOrders()
+      .then((result) => {
+        if (isCurrent) setPendingOrderCount(result.pendingOrders);
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) setOrderCountError(error instanceof Error ? error.message : "Could not load pending orders.");
+      })
+      .finally(() => {
+        if (isCurrent) setIsOrderCountLoading(false);
+      });
+    return () => { isCurrent = false; };
   }, []);
 
   const salesTotals = useMemo(() => {
@@ -90,6 +121,23 @@ export default function Overview({ adminName }: { adminName: string }) {
           <p className="admin-page-description">A clear view of your showroom’s sales and purchasing.</p>
         </div>
       </div>
+
+      {(pendingOrderCount > 0 || orderCountError) && (
+        <div className="mb-5 flex items-center gap-2 rounded-xl border border-[#efd9b5] bg-[#fff9ef] p-2 shadow-sm sm:p-2.5">
+          <button type="button" onClick={onViewOrders} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1 text-left transition hover:bg-[#fff5e4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ad7b37]/40">
+            <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[#a97832] shadow-sm">
+              <FiBell size={20} className={pendingOrderCount > 0 ? "admin-bell-ringing" : ""} aria-hidden="true" />
+              {pendingOrderCount > 0 && <span className="absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center rounded-full border-2 border-[#fff9ef] bg-[#b43f39] px-1 text-[9px] font-bold leading-none text-white">{pendingOrderCount > 99 ? "99+" : pendingOrderCount}</span>}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold text-[#714c1c]">{orderCountError ? "Pending orders could not be loaded" : `${pendingOrderCount} pending ${pendingOrderCount === 1 ? "order" : "orders"}`}</span>
+              <span className="mt-0.5 block text-[10px] leading-4 text-[#8b6b42]">{orderCountError || "Orders are waiting for delivery confirmation. Open orders to review them."}</span>
+            </span>
+            <FiArrowRight size={16} className="shrink-0 text-[#8b642f]" aria-hidden="true" />
+          </button>
+          {orderCountError && <button type="button" onClick={() => void loadPendingOrderCount()} disabled={isOrderCountLoading} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-[10px] font-semibold text-[#8b642f] hover:bg-[#fff5e4] disabled:opacity-50">Retry <FiRefreshCw size={12} className={isOrderCountLoading ? "animate-spin" : ""} /></button>}
+        </div>
+      )}
 
       {loadError && (
         <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#f0d8d6] bg-[#fff6f5] px-4 py-3 text-xs text-[#a13d39]">

@@ -9,6 +9,7 @@ import Overview from "./adminComponents/sidebarPages/Overview";
 import Purchasing from "./adminComponents/sidebarPages/Purchasing";
 import Sales from "./adminComponents/sidebarPages/Sales";
 import Inventory from "./adminComponents/sidebarPages/inventory";
+import Orders from "./adminComponents/sidebarPages/Orders";
 import { logoutAdmin } from "../utils/adminApi";
 import { useAccessibleDialog } from "./adminComponents/useAccessibleDialog";
 
@@ -54,7 +55,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
             <div className="hidden lg:block">
               <p className="text-[11px] text-[var(--admin-subtle)]">Admin workspace</p>
               <p className="mt-0.5 text-[13px] font-semibold">
-                {activeSection === "overview" ? "Your shop at a glance" : activeSection === "sales" ? "Sales performance" : activeSection === "purchasing" ? "Purchasing" : "Inventory"}
+                {activeSection === "overview" ? "Your shop at a glance" : activeSection === "sales" ? "Sales performance" : activeSection === "purchasing" ? "Purchasing" : activeSection === "inventory" ? "Inventory" : "Customer orders"}
               </p>
             </div>
             <div className="ml-auto flex items-center gap-3">
@@ -81,7 +82,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
           </header>
 
           <div className="admin-page">
-            {activeSection === "overview" ? <Overview adminName={adminName} /> : activeSection === "sales" ? <Sales /> : activeSection === "purchasing" ? <Purchasing /> : <Inventory />}
+            {activeSection === "overview" ? <Overview adminName={adminName} onViewOrders={() => setActiveSection("orders")} /> : activeSection === "sales" ? <Sales /> : activeSection === "purchasing" ? <Purchasing /> : activeSection === "inventory" ? <Inventory /> : <Orders />}
             <footer className="border-t border-[var(--admin-border)] py-4 text-center text-[10px] text-[var(--admin-subtle)] sm:py-5 sm:text-[11px]">Soni Saree Showroom · Admin workspace</footer>
           </div>
         </section>

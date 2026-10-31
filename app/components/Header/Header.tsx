@@ -10,8 +10,8 @@ import { useAuth } from "../Auth/AuthProvider";
 
 const navigation = [
   { label: "Home", href: "/" },
-  { label: "Shop", href: "#shop" },
-  { label: "Collections", href: "#collections" },
+  // { label: "Shop", href: "#shop" },
+  { label: "Collections", href: "/categories" },
 ];
 
 function Navigation({ mobile = false }: { mobile?: boolean }) {

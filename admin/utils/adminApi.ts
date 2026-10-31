@@ -67,6 +67,42 @@ export type PurchasePaymentInput = {
   method: PurchasePaymentMethod;
 };
 
+export type AdminOrderItem = {
+  productId: string;
+  name: string;
+  productType: string;
+  category: string;
+  photoUrl: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+};
+
+export type AdminOrder = {
+  id: string;
+  receipt: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  items: AdminOrderItem[];
+  totalAmount: number;
+  currency: string;
+  paymentMethod: string;
+  paymentId: string;
+  paidAt: string | null;
+  deliveryStatus: "pending" | "delivered";
+  deliveredAt: string | null;
+  deliveredBy: string;
+};
+
+export type AdminOrdersResponse = {
+  totalSuccessfullyDelivered: number;
+  pendingOrders: number;
+  orders: AdminOrder[];
+  completedOrders: number;
+  completed: AdminOrder[];
+};
+
 export type SalesTransactionType = "online" | "cash" | "expense";
 
 export type SalesTransaction = {
@@ -107,7 +143,7 @@ export type ProductInput = Omit<Product, "_id" | "photo" | "createdAt" | "update
 };
 
 type AdminRequestOptions = {
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "PATCH";
   body?: Record<string, unknown> | FormData;
 };
 
@@ -162,6 +198,14 @@ export function logoutAdmin() {
 
 export function getPurchases() {
   return sendAdminRequest<{ purchases: Purchase[] }>("/api/admin/purchases", { method: "GET" });
+}
+
+export function getAdminOrders() {
+  return sendAdminRequest<AdminOrdersResponse>("/api/admin/orders", { method: "GET" });
+}
+
+export function markAdminOrderDelivered(orderId: string) {
+  return sendAdminRequest<{ message: string; order: AdminOrder }>(`/api/admin/orders/${encodeURIComponent(orderId)}/deliver`, { method: "PATCH" });
 }
 
 export function createPurchase(purchase: PurchaseInput) {
