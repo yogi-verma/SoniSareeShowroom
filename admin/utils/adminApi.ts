@@ -134,12 +134,14 @@ export type Product = {
   price: number;
   stock: number;
   photo: { url: string; publicId: string };
+  additionalPhotos: { url: string; publicId: string }[];
   createdAt: string;
   updatedAt: string;
 };
 
-export type ProductInput = Omit<Product, "_id" | "photo" | "createdAt" | "updatedAt"> & {
+export type ProductInput = Omit<Product, "_id" | "photo" | "additionalPhotos" | "createdAt" | "updatedAt"> & {
   photo: File;
+  additionalPhotos?: File[];
 };
 
 type AdminRequestOptions = {
@@ -253,6 +255,7 @@ export function createProduct(product: ProductInput) {
   body.append("price", String(product.price));
   body.append("stock", String(product.stock));
   body.append("photo", product.photo);
+  product.additionalPhotos?.forEach((photo) => body.append("additionalPhotos", photo));
 
   return sendAdminRequest<{ message: string; product: Product }>("/api/admin/products", {
     method: "POST",

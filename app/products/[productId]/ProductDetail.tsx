@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { FiRefreshCw, FiShoppingBag, FiZap, FiLoader } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiRefreshCw, FiShoppingBag, FiZap, FiLoader } from "react-icons/fi";
 import Header from "../../components/Header/Header";
 import Footer from "../../components/Footer/Footer";
 import { useAuth } from "../../components/Auth/AuthProvider";
@@ -19,6 +19,7 @@ type Product = {
   price: number;
   stock: number;
   photo?: { url?: string };
+  additionalPhotos?: { url?: string }[];
 };
 
 function formatPrice(price: number) {
@@ -37,6 +38,9 @@ export default function ProductDetail({ productId }: { productId: string }) {
   const error = productResult?.id === productId ? productResult.error : "";
   const [pendingAction, setPendingAction] = useState<"cart" | "buy" | null>(null);
   const [notice, setNotice] = useState("");
+  const [photoSelection, setPhotoSelection] = useState({ productId, index: 0 });
+  const activePhotoIndex = photoSelection.productId === productId ? photoSelection.index : 0;
+  const photos = [product?.photo, ...(product?.additionalPhotos ?? [])].filter((photo): photo is { url: string } => Boolean(photo?.url));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -111,10 +115,16 @@ export default function ProductDetail({ productId }: { productId: string }) {
             <div className="mx-auto w-full max-w-[430px]">
               <div className="relative aspect-[4/5] max-h-[570px] overflow-hidden rounded-2xl border border-[#ece3dc] bg-[#f1eae4] p-2.5 shadow-[0_14px_38px_rgba(43,27,38,0.08)] sm:p-3.5">
                 <div className="relative h-full w-full overflow-hidden rounded-xl bg-[#f8f3ee]">
-                  {product.photo?.url ? <Image src={product.photo.url} alt={product.name} fill priority unoptimized sizes="(max-width: 768px) 100vw, 45vw" className="object-contain" /> : <div className="grid h-full place-items-center text-sm text-[#817681]">Product image unavailable</div>}
+                  {photos.length ? <Image src={photos[activePhotoIndex]?.url ?? photos[0].url} alt={`${product.name} photo ${activePhotoIndex + 1}`} fill priority unoptimized sizes="(max-width: 768px) 100vw, 45vw" className="object-contain" /> : <div className="grid h-full place-items-center text-sm text-[#817681]">Product image unavailable</div>}
                 </div>
                 <span className="absolute left-5 top-5 rounded-full border border-white/70 bg-[#fffdfa]/90 px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#684768] shadow-sm backdrop-blur-sm">{product.category}</span>
+                {photos.length > 1 && <>
+                  <button type="button" onClick={() => setPhotoSelection({ productId, index: (activePhotoIndex - 1 + photos.length) % photos.length })} aria-label="Show previous product photo" className="absolute left-5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#30172f] shadow transition hover:bg-white"><FiChevronLeft size={20} /></button>
+                  <button type="button" onClick={() => setPhotoSelection({ productId, index: (activePhotoIndex + 1) % photos.length })} aria-label="Show next product photo" className="absolute right-5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#30172f] shadow transition hover:bg-white"><FiChevronRight size={20} /></button>
+                  <span className="absolute bottom-5 right-5 rounded-full bg-[#30172f]/80 px-2.5 py-1 text-[9px] font-medium text-white">{activePhotoIndex + 1} / {photos.length}</span>
+                </>}
               </div>
+              {photos.length > 1 && <div className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Product photos">{photos.map((photo, index) => <button key={`${photo.url}-${index}`} type="button" onClick={() => setPhotoSelection({ productId, index })} aria-label={`Show product photo ${index + 1}`} aria-current={activePhotoIndex === index ? "true" : undefined} className={`relative h-16 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition ${activePhotoIndex === index ? "border-[#684768]" : "border-transparent opacity-70 hover:opacity-100"}`}><Image src={photo.url} alt="" fill unoptimized sizes="56px" className="object-cover" /></button>)}</div>}
               <p className="mt-3 text-center text-[9px] tracking-wide text-[#9a8e97]">A closer look at this selected piece</p>
             </div>
 

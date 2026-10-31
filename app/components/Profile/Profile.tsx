@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import {
   FiArrowRight,
@@ -734,12 +735,12 @@ export default function Profile({ email }: { email: string }) {
                       {cart.items.map((item) => (
                         <article key={item.productId} className="rounded-xl border border-[#eee7e1] bg-white p-3.5 sm:p-4">
                           <div className="flex gap-3 sm:gap-4">
-                            <div className="h-[104px] w-[82px] shrink-0 overflow-hidden rounded-lg bg-[#f0e9e4] sm:h-[118px] sm:w-[94px]">
+                            <Link href={`/products/${encodeURIComponent(item.productId)}`} aria-label={`View ${item.name}`} className="h-[104px] w-[82px] shrink-0 overflow-hidden rounded-lg bg-[#f0e9e4] transition hover:ring-2 hover:ring-[#986d8f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#986d8f] sm:h-[118px] sm:w-[94px]">
                               {item.photoUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={item.photoUrl} alt={item.name} className="h-full w-full object-cover" />
                               ) : <div className="grid h-full place-items-center text-[#9a778f]"><FiHome size={22} /></div>}
-                            </div>
+                            </Link>
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-start justify-between gap-2">
                                 <div className="min-w-0">

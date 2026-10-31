@@ -36,10 +36,11 @@ type ProductForm = {
   price: string;
   stock: string;
   photo: File | null;
+  additionalPhotos: File[];
 };
 
 function emptyForm(): ProductForm {
-  return { productType: "", category: "", name: "", price: "", stock: "", photo: null };
+  return { productType: "", category: "", name: "", price: "", stock: "", photo: null, additionalPhotos: [] };
 }
 
 function formatPrice(amount: number) {
@@ -156,7 +157,9 @@ export default function Inventory() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ProductType | "all">("all");
   const [photoPreview, setPhotoPreview] = useState("");
+  const additionalPhotoPreviews = useMemo(() => form.additionalPhotos.map((file) => URL.createObjectURL(file)), [form.additionalPhotos]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const additionalFileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useAccessibleDialog(isModalOpen, isSaving, closeModal);
 
   const loadProducts = useCallback(async () => {
@@ -196,6 +199,10 @@ export default function Inventory() {
   }, [photoPreview]);
 
   useEffect(() => {
+    return () => additionalPhotoPreviews.forEach((preview) => URL.revokeObjectURL(preview));
+  }, [additionalPhotoPreviews]);
+
+  useEffect(() => {
     if (!notice) return;
     const timeoutId = window.setTimeout(() => setNotice(""), 3000);
     return () => window.clearTimeout(timeoutId);
@@ -222,6 +229,31 @@ export default function Inventory() {
     setForm(emptyForm());
     setPhotoPreview("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (additionalFileInputRef.current) additionalFileInputRef.current.value = "";
+  }
+
+  function handleAdditionalPhotosChange(files: FileList | null) {
+    const selected = Array.from(files ?? []);
+    if (form.additionalPhotos.length + selected.length > 4) {
+      setFormError("Choose up to 4 additional photos in total.");
+      if (additionalFileInputRef.current) additionalFileInputRef.current.value = "";
+      return;
+    }
+    if (selected.some((file) => !file.type.startsWith("image/"))) {
+      setFormError("All additional photos must be image files.");
+      return;
+    }
+    if (selected.some((file) => file.size > 5 * 1024 * 1024)) {
+      setFormError("Each additional photo must be 5 MB or smaller.");
+      return;
+    }
+    setForm((current) => ({ ...current, additionalPhotos: [...current.additionalPhotos, ...selected] }));
+    setFormError("");
+    if (additionalFileInputRef.current) additionalFileInputRef.current.value = "";
+  }
+
+  function removeAdditionalPhoto(index: number) {
+    setForm((current) => ({ ...current, additionalPhotos: current.additionalPhotos.filter((_, photoIndex) => photoIndex !== index) }));
   }
 
   function handlePhotoChange(file: File | undefined) {
@@ -261,6 +293,7 @@ export default function Inventory() {
         price: Number(form.price),
         stock: Number(form.stock),
         photo: form.photo,
+        additionalPhotos: form.additionalPhotos,
       });
       setProducts((current) => [result.product, ...current]);
       setNotice("Product added to inventory.");
@@ -381,6 +414,16 @@ export default function Inventory() {
                   <span className="min-w-0"><span className="block truncate text-xs font-semibold text-[var(--admin-charcoal)]">{form.photo?.name ?? "Choose a product image"}</span><span className="mt-1 block text-[10px] text-[var(--admin-subtle)]">JPG, PNG, or WebP · up to 5 MB</span></span>
                   <FiImage className="ml-auto shrink-0 text-[var(--admin-subtle)]" size={17} />
                 </button>
+              </div>
+              <div>
+                <span className="admin-field-label">Additional photos <span className="font-normal text-[var(--admin-subtle)]">(optional · up to 4)</span></span>
+                <input ref={additionalFileInputRef} type="file" accept="image/*" multiple aria-label="Additional product photos" className="sr-only" onChange={(event) => handleAdditionalPhotosChange(event.target.files)} />
+                <button type="button" disabled={form.additionalPhotos.length >= 4} onClick={() => additionalFileInputRef.current?.click()} className="flex w-full items-center gap-3 rounded-xl border border-dashed border-[var(--admin-border-strong)] bg-[#fcfbf9] p-3 text-left transition hover:border-[#b99bb5] hover:bg-[#fbf7fb] disabled:cursor-not-allowed disabled:opacity-60">
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[#f3ebf2] text-plum"><FiImage size={19} /></span>
+                  <span><span className="block text-xs font-semibold text-[var(--admin-charcoal)]">Choose more photos</span><span className="mt-1 block text-[10px] text-[var(--admin-subtle)]">Select multiple images · {form.additionalPhotos.length}/4 · up to 5 MB each</span></span>
+                  <FiUploadCloud className="ml-auto shrink-0 text-[var(--admin-subtle)]" size={17} />
+                </button>
+                {!!form.additionalPhotos.length && <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">{form.additionalPhotos.map((file, index) => <li key={`${file.name}-${index}`} className="relative min-w-0 overflow-hidden rounded-lg border border-[var(--admin-border)] bg-white"><img src={additionalPhotoPreviews[index]} alt={`Additional product photo ${index + 1}`} className="aspect-square w-full object-cover" /><button type="button" onClick={() => removeAdditionalPhoto(index)} aria-label={`Remove ${file.name}`} className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-[#6c536b] shadow"><FiX size={14} /></button><span className="block truncate px-2 py-1 text-[9px] text-[var(--admin-muted)]">{file.name}</span></li>)}</ul>}
               </div>
 
               {formError && <p role="alert" className="rounded-lg border border-[#f0d8d6] bg-[#fff6f5] px-3 py-2.5 text-xs leading-5 text-[#a13d39]">{formError}</p>}
