@@ -649,23 +649,34 @@ export default function Profile({ email }: { email: string }) {
                     <article className="overflow-hidden rounded-xl border border-[#eee7e1] bg-white">
                       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee7e1] bg-[#fcf8fb] px-4 py-3 sm:px-5">
                         <div><p className="text-[9px] font-semibold tracking-[0.16em] text-[#986d8f]">ORDER DETAILS</p><p className="mt-1 text-[10px] text-[#817681]">Placed {new Date(selectedOrder.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p></div>
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-semibold ${selectedOrder.deliveryStatus === "delivered" ? "bg-[#edf4ee] text-[#54745f]" : "bg-[#fff5e8] text-[#8b642f]"}`}><FiCheckCircle size={12} /> {selectedOrder.deliveryStatus === "delivered" ? "DELIVERED" : "DELIVERY PENDING"}</span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#edf4ee] px-3 py-1.5 text-[9px] font-semibold text-[#54745f]"><FiCheckCircle size={12} /> PAYMENT RECEIVED</span>
                       </div>
                       <div className="grid gap-5 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_250px]">
                         <div className="space-y-3">
+                          <div aria-label="Order progress" className="flex items-center gap-2 rounded-lg border border-[#eee7e1] bg-[#fffdfa] p-3">
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#edf4ee] text-[#54745f]"><FiCheckCircle size={15} /></span>
+                              <span className="min-w-0"><span className="block text-[8px] font-semibold uppercase tracking-[0.12em] text-[#54745f]">Step 1</span><span className="block text-[10px] font-semibold text-[#463847]">Payment received</span></span>
+                            </div>
+                            <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-[#cbb8c8]" />
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${selectedOrder.deliveryStatus === "delivered" ? "bg-[#edf4ee] text-[#54745f]" : "bg-[#fff5e8] text-[#8b642f]"}`}><FiCheckCircle size={15} /></span>
+                              <span className="min-w-0"><span className={`block text-[8px] font-semibold uppercase tracking-[0.12em] ${selectedOrder.deliveryStatus === "delivered" ? "text-[#54745f]" : "text-[#8b642f]"}`}>Step 2</span><span className="block text-[10px] font-semibold text-[#463847]">{selectedOrder.deliveryStatus === "delivered" ? "Delivered" : "Delivery pending"}</span></span>
+                            </div>
+                          </div>
                           {selectedOrder.items.map((item) => (
                             <div key={item.productId} className="flex gap-3 rounded-lg border border-[#eee7e1] p-3">
-                              <div className="h-20 w-16 shrink-0 overflow-hidden rounded-md bg-[#f0e9e4]">{item.photoUrl ? <Image src={item.photoUrl} alt={item.name} width={80} height={100} unoptimized className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-[#9a778f]"><FiPackage size={18} /></div>}</div>
+                              <Link href={`/products/${encodeURIComponent(item.productId)}`} aria-label={`View ${item.name}`} className="h-20 w-16 shrink-0 overflow-hidden rounded-md bg-[#f0e9e4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#986d8f]">{item.photoUrl ? <Image src={item.photoUrl} alt={item.name} width={80} height={100} unoptimized className="h-full w-full object-cover transition hover:opacity-85" /> : <div className="grid h-full place-items-center text-[#9a778f]"><FiPackage size={18} /></div>}</Link>
                               <div className="min-w-0 flex-1 py-0.5">
                                 <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#986d8f]">{item.productType} · {item.category}</p>
-                                <h3 className="mt-1 font-serif text-base leading-5 text-[#302531]">{item.name}</h3>
+                                <h3 className="mt-1 font-serif text-base leading-5 text-[#302531]"><Link href={`/products/${encodeURIComponent(item.productId)}`} className="rounded-sm transition hover:text-[#684768] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#986d8f]">{item.name}</Link></h3>
                                 <p className="mt-1 text-[10px] text-[#777078]">{formatPrice(item.unitPrice)} each · Qty {item.quantity}</p>
                                 <p className="mt-1 text-xs font-semibold text-[#30172f]">{formatPrice(item.lineTotal)}</p>
                               </div>
                             </div>
                           ))}
                           <p className="text-right text-sm font-semibold text-[#30172f]">Total paid: {formatPrice(selectedOrder.totalAmount)}</p>
-                          <p className={`rounded-lg px-3 py-2 text-[10px] leading-4 ${selectedOrder.deliveryStatus === "delivered" ? "bg-[#edf4ee] text-[#54745f]" : "bg-[#fff8ed] text-[#8b642f]"}`}>{selectedOrder.deliveryStatus === "delivered" && selectedOrder.deliveredAt ? `Delivered on ${new Date(selectedOrder.deliveredAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.` : selectedOrder.deliveryMessage}</p>
+                          <p className={`rounded-lg px-3 py-2 text-[10px] leading-4 ${selectedOrder.deliveryStatus === "delivered" ? "bg-[#edf4ee] text-[#54745f]" : "bg-[#fff8ed] text-[#8b642f]"}`}>{selectedOrder.deliveryStatus === "delivered" && selectedOrder.deliveredAt ? `Your payment was received successfully. Delivered on ${new Date(selectedOrder.deliveredAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.` : selectedOrder.deliveryMessage}</p>
                         </div>
                         <dl className="space-y-3 rounded-lg bg-[#faf7f2] p-4 text-[10px]">
                           <div><dt className="text-[#918792]">Order reference</dt><dd className="mt-0.5 break-all font-medium text-[#463847]">{selectedOrder.receipt}</dd></div>
@@ -689,7 +700,8 @@ export default function Profile({ email }: { email: string }) {
                           <p className="text-[7px] font-semibold uppercase tracking-[0.12em] text-[#986d8f]">{order.itemCount} {order.itemCount === 1 ? "item" : "items"}</p>
                           <h3 className="mt-0.5 line-clamp-1 font-serif text-sm text-[#302531]">{order.productName}</h3>
                           <p className="mt-1 text-[9px] text-[#817681]">{new Date(order.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · Qty {order.quantity}</p>
-                          <span className={`mt-1 inline-flex items-center gap-1 text-[8px] font-semibold ${order.deliveryStatus === "delivered" ? "text-[#54745f]" : "text-[#8b642f]"}`}>{order.deliveryStatus === "delivered" ? "Delivered" : "Delivery pending"} <FiArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" /></span>
+                          <span className="mt-1 block text-[8px] font-semibold text-[#54745f]">Payment received successfully</span>
+                          <span className={`mt-0.5 inline-flex items-center gap-1 text-[8px] font-semibold ${order.deliveryStatus === "delivered" ? "text-[#54745f]" : "text-[#8b642f]"}`}>{order.deliveryStatus === "delivered" ? "Delivery successful" : "Delivery pending"} <FiArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" /></span>
                         </div>
                         <p className="shrink-0 self-start text-[10px] font-semibold text-[#30172f]">{formatPrice(order.totalAmount)}</p>
                       </button>
