@@ -1,10 +1,9 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
-import CategoryComingSoon from "../../CategoryComingSoon";
+import CategoryProducts from "../../CategoryProducts";
 
 export const metadata: Metadata = {
   title: "Suits | Soni Saree Showroom",
-  description: "Our suit collection is coming soon.",
+  description: "Browse suits and sets from Soni Saree Showroom.",
 };
 
 type Props = {
@@ -18,15 +17,7 @@ function formatCategory(slug: string) {
     .join(" ");
 }
 
-async function SuitCategoryContent({ params }: Props) {
+export default async function SuitCategoryPage({ params }: Props) {
   const { category } = await params;
-  return <CategoryComingSoon categoryName={formatCategory(category)} collectionName="suits" />;
-}
-
-export default function SuitCategoryPage({ params }: Props) {
-  return (
-    <Suspense fallback={<CategoryComingSoon categoryName="Suits" collectionName="suits" />}>
-      <SuitCategoryContent params={params} />
-    </Suspense>
-  );
+  return <CategoryProducts categoryName={formatCategory(category)} collectionName="suits" productType="shut" />;
 }

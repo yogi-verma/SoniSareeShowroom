@@ -1,6 +1,7 @@
 "use client";
 
 import Image, { type StaticImageData } from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
 import { useAuth } from "../../components/Auth/AuthProvider";
@@ -153,12 +154,14 @@ export default function SareeCollection({ title, editTitle, description, categor
             {products.map((product, index) => (
               <article key={product._id} className="group flex flex-col overflow-hidden border border-[#e9e0d9] bg-white shadow-[0_4px_18px_rgba(43,27,38,0.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(43,27,38,0.12)]">
                 <div className="relative aspect-[4/4.8] overflow-hidden bg-[#eee6e0]">
-                  <Image src={product.photo.url} alt={product.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw" unoptimized className="object-cover transition-transform duration-700 group-hover:scale-[1.045]" />
+              <Link href={`/products/${encodeURIComponent(product._id)}`} aria-label={`View ${product.name}`} className="absolute inset-0 z-[1]">
+                <Image src={product.photo.url} alt={product.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw" unoptimized className="object-cover transition-transform duration-700 group-hover:scale-[1.045]" />
+              </Link>
                   <span className="absolute left-2.5 top-2.5 rounded-full bg-[#fffaf4]/95 px-2 py-1.5 text-[7px] font-semibold tracking-[0.12em] text-[#684768] shadow-sm sm:left-3 sm:top-3 sm:px-2.5 sm:text-[8px]">{product.category}</span>
                   <span className="absolute bottom-2.5 right-2.5 rounded-full bg-[#211821]/75 px-2.5 py-1 text-[8px] text-white backdrop-blur-sm">{String(index + 1).padStart(2, "0")} / {String(products.length).padStart(2, "0")}</span>
                 </div>
                 <div className="flex flex-1 flex-col p-3 sm:p-4">
-                  <h3 className="min-h-7 font-serif text-[13px] leading-snug text-[#302531] sm:text-[15px]">{product.name}</h3>
+                  <h3 className="min-h-7 font-serif text-[13px] leading-snug text-[#302531] sm:text-[15px]"><Link href={`/products/${encodeURIComponent(product._id)}`} className="rounded-sm hover:text-[#684768] focus-visible:outline-2 focus-visible:outline-[#986d8f]">{product.name}</Link></h3>
                   <div className="mt-2 flex items-center justify-between gap-2">
                     <strong className="text-[12px] font-semibold text-[#251c25] sm:text-[14px]">{formatPrice(product.price)}</strong>
                     <span className={`text-[8px] font-medium sm:text-[9px] ${product.stock > 0 ? "text-[#54745f]" : "text-[#a13d39]"}`}>{product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}</span>

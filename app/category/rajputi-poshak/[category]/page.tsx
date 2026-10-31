@@ -1,10 +1,9 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
-import CategoryComingSoon from "../../CategoryComingSoon";
+import CategoryProducts from "../../CategoryProducts";
 
 export const metadata: Metadata = {
   title: "Rajputi Poshak | Soni Saree Showroom",
-  description: "Our Rajputi Poshak collection is coming soon.",
+  description: "Browse traditional Rajputi Poshak from Soni Saree Showroom.",
 };
 
 type Props = {
@@ -18,15 +17,7 @@ function formatCategory(slug: string) {
     .join(" ");
 }
 
-async function RajputiPoshakCategoryContent({ params }: Props) {
+export default async function RajputiPoshakCategoryPage({ params }: Props) {
   const { category } = await params;
-  return <CategoryComingSoon categoryName={formatCategory(category)} collectionName="Rajputi Poshak" />;
-}
-
-export default function RajputiPoshakCategoryPage({ params }: Props) {
-  return (
-    <Suspense fallback={<CategoryComingSoon categoryName="Rajputi Poshak" collectionName="Rajputi Poshak" />}>
-      <RajputiPoshakCategoryContent params={params} />
-    </Suspense>
-  );
+  return <CategoryProducts categoryName={formatCategory(category)} collectionName="Rajputi Poshak" productType="rajputi poshak" />;
 }

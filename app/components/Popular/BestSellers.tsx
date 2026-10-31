@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
 import { useAuth } from "../Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
@@ -175,15 +176,17 @@ export default function BestSellers() {
             className="group flex w-[76%] min-w-[230px] shrink-0 snap-start flex-col overflow-hidden rounded-sm border border-[#eadfd8] bg-[#fffdfa] shadow-[0_3px_16px_rgba(43,27,38,0.05)] transition-shadow hover:shadow-[0_12px_30px_rgba(43,27,38,0.13)] sm:w-[47%] md:w-[31%] lg:w-[calc((100%-3rem)/4)] xl:w-[calc((100%-4rem)/5)]"
           >
             <div className="relative aspect-[4/4.8] overflow-hidden bg-[#eee6e0]">
-              <Image
-                src={product.photo.url}
-                alt={product.name}
-                fill
-                sizes="(max-width: 640px) 76vw, (max-width: 1024px) 31vw, 20vw"
-                unoptimized
-                loading={index < 5 ? "eager" : "lazy"}
-                className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-              />
+              <Link href={`/products/${encodeURIComponent(product._id)}`} aria-label={`View ${product.name}`} className="absolute inset-0 z-[1]">
+                <Image
+                  src={product.photo.url}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 640px) 76vw, (max-width: 1024px) 31vw, 20vw"
+                  unoptimized
+                  loading={index < 5 ? "eager" : "lazy"}
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                />
+              </Link>
               <span className="absolute left-3 top-3 rounded-sm bg-[#fffaf4]/95 px-2.5 py-1.5 text-[7px] font-semibold tracking-[0.12em] text-[#684768] shadow-sm sm:text-[8px]">
                 {product.category}
               </span>
@@ -197,7 +200,7 @@ export default function BestSellers() {
                 {product.stock > 0 ? `${product.stock} IN STOCK` : "OUT OF STOCK"}
               </span>
               <h3 className="mt-1.5 min-h-7 font-serif text-[14px] leading-snug text-[#302531] sm:text-[15px]">
-                {product.name}
+                <Link href={`/products/${encodeURIComponent(product._id)}`} className="rounded-sm hover:text-[#684768] focus-visible:outline-2 focus-visible:outline-[#986d8f]">{product.name}</Link>
               </h3>
               <div className="mt-2 flex items-baseline gap-2">
                 <strong className="text-[13px] font-semibold text-ink">{formatPrice(product.price)}</strong>
