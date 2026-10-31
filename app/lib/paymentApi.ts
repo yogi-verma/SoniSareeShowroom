@@ -39,8 +39,8 @@ declare global {
   }
 }
 
-async function request<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${authApiUrl}/api/users/me/orders${path}`, {
+async function request<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(`${authApiUrl}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -53,14 +53,18 @@ async function request<T>(path: string, body: unknown): Promise<T> {
 }
 
 export function createPaymentOrder(productId: string, quantity = 1) {
-  return request<PaymentOrder>("", { productId, quantity });
+  return request<PaymentOrder>("/api/users/me/orders", { productId, quantity });
 }
 
 export function verifyPayment(localOrderId: string, payment: RazorpayPaymentResponse) {
   return request<{ verified: boolean; status: "paid" | "authorized"; orderId: string; message?: string }>(
-    "/verify",
+    "/api/users/me/orders/verify",
     { localOrderId, ...payment },
   );
+}
+
+export function createCartPaymentOrder() {
+  return request<PaymentOrder>("/api/users/me/cart/checkout");
 }
 
 function loadRazorpayCheckout() {
@@ -75,16 +79,17 @@ function loadRazorpayCheckout() {
   });
 }
 
-export async function openProductCheckout(
-  productId: string,
+async function openCheckout(
+  orderRequest: Promise<PaymentOrder>,
   customer: CheckoutCustomer,
   callbacks: {
     onVerified: (status: "paid" | "authorized", message?: string) => void;
     onFailure: (message: string) => void;
     onDismiss: () => void;
   },
+  clearCartAfterPayment: boolean,
 ) {
-  const order = await createPaymentOrder(productId);
+  const order = await orderRequest;
   await loadRazorpayCheckout();
   if (!window.Razorpay) throw new Error("Secure checkout did not initialize. Please try again.");
 
@@ -99,11 +104,32 @@ export async function openProductCheckout(
     theme: { color: "#30172f" },
     handler: (payment) => {
       void verifyPayment(order.localOrderId, payment)
-        .then((verification) => callbacks.onVerified(verification.status, verification.message))
+        .then((verification) => {
+          if (verification.status === "paid") {
+            window.dispatchEvent(new Event("soni:order-updated"));
+            if (clearCartAfterPayment) window.dispatchEvent(new Event("soni:cart-updated"));
+          }
+          callbacks.onVerified(verification.status, verification.message);
+        })
         .catch((error: unknown) => callbacks.onFailure(error instanceof Error ? error.message : "Could not verify payment. Please contact support."));
     },
     modal: { ondismiss: callbacks.onDismiss },
   });
   checkout.on("payment.failed", (failure) => callbacks.onFailure(failure.error?.description || "Payment failed. Please try again."));
   checkout.open();
+}
+
+export function openProductCheckout(
+  productId: string,
+  customer: CheckoutCustomer,
+  callbacks: Parameters<typeof openCheckout>[2],
+) {
+  return openCheckout(createPaymentOrder(productId), customer, callbacks, false);
+}
+
+export function openCartCheckout(
+  customer: CheckoutCustomer,
+  callbacks: Parameters<typeof openCheckout>[2],
+) {
+  return openCheckout(createCartPaymentOrder(), customer, callbacks, true);
 }

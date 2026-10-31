@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   FiArrowRight,
   FiCheck,
@@ -14,6 +15,7 @@ import {
   FiMinus,
   FiMapPin,
   FiPhone,
+  FiPackage,
   FiPlus,
   FiRefreshCw,
   FiShoppingBag,
@@ -21,10 +23,13 @@ import {
   FiTrash2,
   FiUser,
   FiX,
+  FiLoader
 } from "react-icons/fi";
 import Header from "../Header/Header";
 import { type AuthUser, useAuth } from "../Auth/AuthProvider";
 import { clearCart as clearCartRequest, getCart, removeCartItem as removeCartItemRequest, updateCartItem as updateCartItemRequest, type Cart, type CartItem } from "../../lib/cartApi";
+import { openCartCheckout } from "../../lib/paymentApi";
+import { getMyOrder, getMyOrders, type OrderDetail, type OrderSummary } from "../../lib/ordersApi";
 
 type UserAddress = {
   _id: string;
@@ -42,7 +47,7 @@ type ProfileData = AuthUser & {
   addresses: UserAddress[];
 };
 type AddressDraft = Omit<UserAddress, "_id">;
-type ProfileSection = "personal" | "addresses" | "cart";
+type ProfileSection = "personal" | "addresses" | "orders" | "cart";
 type ApiError = { message?: string };
 
 const authApiUrl = (process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:5000").replace(/\/+$/, "");
@@ -167,6 +172,13 @@ export default function Profile({ email }: { email: string }) {
   const [isRemovingCartItem, setIsRemovingCartItem] = useState(false);
   const [isClearCartConfirmationOpen, setIsClearCartConfirmationOpen] = useState(false);
   const [isClearingCart, setIsClearingCart] = useState(false);
+  const [isStartingCartCheckout, setIsStartingCartCheckout] = useState(false);
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<OrderDetail | null>(null);
+  const [isOrderDetailLoading, setIsOrderDetailLoading] = useState(false);
+  const [orderDetailError, setOrderDetailError] = useState("");
 
   const loadProfile = useCallback(async (showLoading = true) => {
     if (showLoading) setIsProfileLoading(true);
@@ -202,6 +214,43 @@ export default function Profile({ email }: { email: string }) {
       isActive = false;
     };
   }, [isAuthLoading, isOwnProfile, user?.id]);
+
+  const loggedInEmail = user?.email;
+  const refreshOrders = useCallback(async () => {
+    if (!loggedInEmail) return;
+    setIsOrdersLoading(true);
+    setOrdersError("");
+    try {
+      const result = await getMyOrders(loggedInEmail);
+      setOrders(result.orders);
+    } catch (error) {
+      setOrdersError(error instanceof Error ? error.message : "Could not load your orders.");
+    } finally {
+      setIsOrdersLoading(false);
+    }
+  }, [loggedInEmail]);
+
+  useEffect(() => {
+    if (!isOwnProfile) return;
+    const refreshAfterPayment = () => void refreshOrders();
+    window.addEventListener("soni:order-updated", refreshAfterPayment);
+    return () => window.removeEventListener("soni:order-updated", refreshAfterPayment);
+  }, [isOwnProfile, refreshOrders]);
+
+  async function openOrderDetails(orderId: string) {
+    if (!user?.email) return;
+    setIsOrderDetailLoading(true);
+    setOrderDetailError("");
+    setSelectedOrder(null);
+    try {
+      const result = await getMyOrder(user.email, orderId);
+      setSelectedOrder(result.order);
+    } catch (error) {
+      setOrderDetailError(error instanceof Error ? error.message : "Could not load this order.");
+    } finally {
+      setIsOrderDetailLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (isAuthLoading || !isOwnProfile) return;
@@ -363,6 +412,27 @@ export default function Profile({ email }: { email: string }) {
     }
   }
 
+  async function checkoutCart() {
+    if (!user) {
+      openSignIn();
+      return;
+    }
+    if (!cart.items.length || cart.items.some((item) => !item.isAvailable)) return;
+
+    setIsStartingCartCheckout(true);
+    try {
+      await openCartCheckout({ name: user.name, email: user.email }, {
+        onVerified: (status) => setNotice(status === "paid" ? "Payment successful. Your cart order is confirmed." : "Payment authorized and awaiting confirmation."),
+        onFailure: setNotice,
+        onDismiss: () => setNotice("Checkout was closed. No payment was confirmed."),
+      });
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not start checkout.");
+    } finally {
+      setIsStartingCartCheckout(false);
+    }
+  }
+
   async function removeCartItem() {
     if (!cartItemToRemove) return;
     setIsRemovingCartItem(true);
@@ -420,13 +490,14 @@ export default function Profile({ email }: { email: string }) {
                 {([
                   { id: "personal", label: "Personal Details", icon: FiUser },
                   { id: "addresses", label: "Your Addresses", icon: FiHome },
+                  { id: "orders", label: "Your Orders", icon: FiPackage, count: orders.length },
                   { id: "cart", label: "Your Cart", icon: FiShoppingBag, count: cart.totalItems },
                 ] as const).map(({ id, label, icon: Icon, ...item }) => (
                   <button
                     key={id}
                     type="button"
                     aria-current={activeSection === id ? "page" : undefined}
-                    onClick={() => setActiveSection(id)}
+                    onClick={() => { setActiveSection(id); if (id === "orders") void refreshOrders(); }}
                     className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3.5 text-left text-xs font-semibold transition ${activeSection === id ? "bg-[#30172f] text-white shadow-sm" : "text-[#6f626f] hover:bg-[#f6eef4] hover:text-[#30172f]"}`}
                   >
                     <Icon size={16} />
@@ -557,6 +628,81 @@ export default function Profile({ email }: { email: string }) {
                 )}
               </section>}
 
+              {activeSection === "orders" && <section id="orders" className="scroll-mt-24 rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
+                <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#eee7e1] pb-5">
+                  <div>
+                    <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">YOUR PURCHASES</span>
+                    <h2 className="mt-1.5 font-serif text-2xl">Your orders</h2>
+                    <p className="mt-1 text-xs text-[#817681]">{orders.length} paid {orders.length === 1 ? "order" : "orders"}</p>
+                  </div>
+                  {!selectedOrder && <button type="button" onClick={() => void refreshOrders()} disabled={isOrdersLoading} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d9cbd4] px-3 text-[10px] font-semibold text-[#684768] transition hover:bg-[#f6eef4] disabled:opacity-50"><FiRefreshCw size={13} className={isOrdersLoading ? "animate-spin" : ""} /> Refresh</button>}
+                </div>
+
+                {ordersError && <div role="alert" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#efd5d3] bg-[#fff9f8] px-3 py-2.5 text-xs text-[#9b3935]"><span>{ordersError}</span><button type="button" onClick={() => void refreshOrders()} className="font-semibold">Try again</button></div>}
+
+                {isOrdersLoading ? (
+                  <div className="mt-5 space-y-3">{[0, 1].map((item) => <div key={item} className="h-24 animate-pulse rounded-xl bg-[#f0e9e4]" />)}</div>
+                ) : selectedOrder ? (
+                  <div className="mt-5">
+                    <button type="button" onClick={() => { setSelectedOrder(null); setOrderDetailError(""); }} className="mb-4 inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-semibold text-[#684768] transition hover:bg-[#f6eef4]"><FiArrowRight className="rotate-180" size={14} /> Back to all orders</button>
+                    <article className="overflow-hidden rounded-xl border border-[#eee7e1] bg-white">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eee7e1] bg-[#fcf8fb] px-4 py-3 sm:px-5">
+                        <div><p className="text-[9px] font-semibold tracking-[0.16em] text-[#986d8f]">ORDER DETAILS</p><p className="mt-1 text-[10px] text-[#817681]">Placed {new Date(selectedOrder.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p></div>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#edf4ee] px-3 py-1.5 text-[9px] font-semibold text-[#54745f]"><FiCheckCircle size={12} /> PAYMENT SUCCESSFUL</span>
+                      </div>
+                      <div className="grid gap-5 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_250px]">
+                        <div className="space-y-3">
+                          {selectedOrder.items.map((item) => (
+                            <div key={item.productId} className="flex gap-3 rounded-lg border border-[#eee7e1] p-3">
+                              <div className="h-20 w-16 shrink-0 overflow-hidden rounded-md bg-[#f0e9e4]">{item.photoUrl ? <Image src={item.photoUrl} alt={item.name} width={80} height={100} unoptimized className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-[#9a778f]"><FiPackage size={18} /></div>}</div>
+                              <div className="min-w-0 flex-1 py-0.5">
+                                <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#986d8f]">{item.productType} · {item.category}</p>
+                                <h3 className="mt-1 font-serif text-base leading-5 text-[#302531]">{item.name}</h3>
+                                <p className="mt-1 text-[10px] text-[#777078]">{formatPrice(item.unitPrice)} each · Qty {item.quantity}</p>
+                                <p className="mt-1 text-xs font-semibold text-[#30172f]">{formatPrice(item.lineTotal)}</p>
+                              </div>
+                            </div>
+                          ))}
+                          <p className="text-right text-sm font-semibold text-[#30172f]">Total paid: {formatPrice(selectedOrder.totalAmount)}</p>
+                        </div>
+                        <dl className="space-y-3 rounded-lg bg-[#faf7f2] p-4 text-[10px]">
+                          <div><dt className="text-[#918792]">Order reference</dt><dd className="mt-0.5 break-all font-medium text-[#463847]">{selectedOrder.receipt}</dd></div>
+                          <div><dt className="text-[#918792]">Payment method</dt><dd className="mt-0.5 font-medium capitalize text-[#463847]">{selectedOrder.paymentMethod || "Razorpay"}</dd></div>
+                          <div><dt className="text-[#918792]">Payment ID</dt><dd className="mt-0.5 break-all font-medium text-[#463847]">{selectedOrder.razorpayPaymentId || "—"}</dd></div>
+                          <div><dt className="text-[#918792]">Paid by</dt><dd className="mt-0.5 break-all font-medium text-[#463847]">{selectedOrder.customerEmail || user.email}</dd></div>
+                        </dl>
+                      </div>
+                    </article>
+                  </div>
+                ) : isOrderDetailLoading ? (
+                  <div className="mt-5 h-56 animate-pulse rounded-xl bg-[#f0e9e4]" />
+                ) : orderDetailError ? (
+                  <p role="alert" className="mt-5 rounded-lg bg-[#fff6f5] px-4 py-3 text-xs text-[#9b3935]">{orderDetailError}</p>
+                ) : orders.length ? (
+                  <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
+                    {orders.map((order) => (
+                      <button key={order.id} type="button" onClick={() => void openOrderDetails(order.id)} className="group flex w-full items-center gap-2.5 rounded-lg border border-[#eee7e1] bg-white p-2.5 text-left transition hover:border-[#cbb8c8] hover:bg-[#fffdfa] hover:shadow-sm">
+                        <div className="h-16 w-12 shrink-0 overflow-hidden rounded-md bg-[#f0e9e4]">{order.productPhotoUrl ? <Image src={order.productPhotoUrl} alt="" width={64} height={84} unoptimized className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-[#9a778f]"><FiPackage size={17} /></div>}</div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[7px] font-semibold uppercase tracking-[0.12em] text-[#986d8f]">{order.itemCount} {order.itemCount === 1 ? "item" : "items"}</p>
+                          <h3 className="mt-0.5 line-clamp-1 font-serif text-sm text-[#302531]">{order.productName}</h3>
+                          <p className="mt-1 text-[9px] text-[#817681]">{new Date(order.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · Qty {order.quantity}</p>
+                          <span className="mt-1 inline-flex items-center gap-1 text-[8px] font-semibold text-[#54745f]">Paid <FiArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" /></span>
+                        </div>
+                        <p className="shrink-0 self-start text-[10px] font-semibold text-[#30172f]">{formatPrice(order.totalAmount)}</p>
+                      </button>
+                    ))}
+                  </div>
+                ) : !ordersError && (
+                  <div className="mt-5 rounded-xl border border-dashed border-[#d9cbd4] bg-white px-5 py-12 text-center">
+                    <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#f6eef4] text-[#684768]"><FiPackage size={19} /></span>
+                    <h3 className="mt-3 font-serif text-xl">Your orders will appear here</h3>
+                    <p className="mt-1 text-xs text-[#817681]">Orders appear after payment is successfully confirmed.</p>
+                    <button type="button" onClick={() => router.push("/#shop")} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#cbb8c8] px-4 text-xs font-semibold text-[#684768] transition hover:bg-[#f6eef4]"><FiArrowRight size={14} /> Explore the collection</button>
+                  </div>
+                )}
+              </section>}
+
               {activeSection === "cart" && <section id="cart" className="scroll-mt-24 rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
                 <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#eee7e1] pb-5">
                   <div>
@@ -630,7 +776,8 @@ export default function Profile({ email }: { email: string }) {
                         <strong className="text-sm text-[#302531]">{formatPrice(cart.subtotal)}</strong>
                       </div>
                       <p className="mt-3 border-t border-[#e9dfe8] pt-3 text-[10px] leading-4 text-[#817681]">Prices and availability are refreshed from the catalog. Cart items are not reserved.</p>
-                      <button type="button" disabled className="mt-4 min-h-11 w-full cursor-not-allowed rounded-lg bg-[#30172f] px-3 text-xs font-semibold text-white opacity-55">Checkout coming soon</button>
+                      {cart.items.some((item) => !item.isAvailable) && <p className="mt-3 text-[10px] leading-4 text-[#9b504d]">Resolve unavailable items before checkout.</p>}
+                      <button type="button" disabled={isStartingCartCheckout || cart.items.some((item) => !item.isAvailable)} onClick={() => void checkoutCart()} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#30172f] px-3 text-xs font-semibold text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-55">{isStartingCartCheckout ? <><FiLoader size={14} className="animate-spin" /> Redirecting…</> : "Checkout securely"}</button>
                     </aside>
                   </div>
                 ) : (
