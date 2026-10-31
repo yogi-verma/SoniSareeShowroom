@@ -103,6 +103,22 @@ export type AdminOrdersResponse = {
   completed: AdminOrder[];
 };
 
+export type AdminUser = {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  email: string;
+  totalOrders: number;
+  totalPurchasing: number;
+  createdAt: string;
+};
+
+export type AdminUsersResponse = {
+  totalUsers: number;
+  topUsers: AdminUser[];
+  users: AdminUser[];
+};
+
 export type SalesTransactionType = "online" | "cash" | "expense";
 
 export type SalesTransaction = {
@@ -208,6 +224,10 @@ export function getPurchases() {
 
 export function getAdminOrders() {
   return sendAdminRequest<AdminOrdersResponse>("/api/admin/orders", { method: "GET" });
+}
+
+export function getAdminUsers() {
+  return sendAdminRequest<AdminUsersResponse>("/api/admin/users", { method: "GET" });
 }
 
 export function markAdminOrderDelivered(orderId: string) {
