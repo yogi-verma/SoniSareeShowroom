@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import CategoryProducts from "../../CategoryProducts";
 
 export const metadata: Metadata = {
@@ -17,7 +18,15 @@ function formatCategory(slug: string) {
     .join(" ");
 }
 
-export default async function RajputiPoshakCategoryPage({ params }: Props) {
+async function RajputiPoshakCategoryContent({ params }: Props) {
   const { category } = await params;
   return <CategoryProducts categoryName={formatCategory(category)} collectionName="Rajputi Poshak" productType="rajputi poshak" />;
+}
+
+export default function RajputiPoshakCategoryPage({ params }: Props) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#faf7f2]" aria-busy="true" />}>
+      <RajputiPoshakCategoryContent params={params} />
+    </Suspense>
+  );
 }

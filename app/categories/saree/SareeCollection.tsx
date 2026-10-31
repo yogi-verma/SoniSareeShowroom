@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
 import { useAuth } from "../../components/Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
+import { openProductCheckout } from "../../lib/paymentApi";
 
 type SareeProduct = {
   _id: string;
@@ -40,6 +41,7 @@ export default function SareeCollection({ title, editTitle, description, categor
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
+  const [checkoutProductId, setCheckoutProductId] = useState<string | null>(null);
 
   const loadProducts = useCallback(async () => {
     setIsLoading(true);
@@ -86,12 +88,24 @@ export default function SareeCollection({ title, editTitle, description, categor
     return () => window.clearTimeout(timeoutId);
   }, [message]);
 
-  const requestShoppingAction = () => {
+  const requestShoppingAction = async (product: SareeProduct) => {
     if (!user) {
       openSignIn();
       return;
     }
-    setMessage("Checkout is coming soon. Add the item to your bag to save it.");
+    setCheckoutProductId(product._id);
+    setMessage("");
+    try {
+      await openProductCheckout(product._id, { name: user.name, email: user.email }, {
+        onVerified: (status) => setMessage(status === "paid" ? `Payment successful · ${product.name}` : "Payment authorized and awaiting confirmation."),
+        onFailure: setMessage,
+        onDismiss: () => setMessage("Checkout was closed. No payment was confirmed."),
+      });
+    } catch (checkoutError) {
+      setMessage(checkoutError instanceof Error ? checkoutError.message : "Could not start checkout.");
+    } finally {
+      setCheckoutProductId(null);
+    }
   };
 
   const addProductToBag = async (product: SareeProduct) => {
@@ -167,7 +181,7 @@ export default function SareeCollection({ title, editTitle, description, categor
                     <span className={`text-[8px] font-medium sm:text-[9px] ${product.stock > 0 ? "text-[#54745f]" : "text-[#a13d39]"}`}>{product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}</span>
                   </div>
                   <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3 sm:gap-2 sm:pt-4">
-                    <button type="button" disabled={!product.stock} onClick={requestShoppingAction} className="min-h-9 rounded-sm bg-[#30172f] px-1.5 text-[8px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:bg-[#a99ca8] sm:min-h-10 sm:px-2 sm:text-[10px]">Buy now</button>
+                    <button type="button" disabled={!product.stock || checkoutProductId === product._id} onClick={() => void requestShoppingAction(product)} className="min-h-9 rounded-sm bg-[#30172f] px-1.5 text-[8px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:bg-[#a99ca8] sm:min-h-10 sm:px-2 sm:text-[10px]">{checkoutProductId === product._id ? "Opening…" : "Buy now"}</button>
                     <button type="button" disabled={!product.stock || addingProductId === product._id} onClick={() => void addProductToBag(product)} className="min-h-9 rounded-sm border border-[#cbb8c8] px-1.5 text-[8px] font-semibold tracking-wide text-[#30172f] transition hover:border-[#30172f] hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10 sm:px-2 sm:text-[10px]">{addingProductId === product._id ? "Adding…" : "Add to bag"}</button>
                   </div>
                 </div>

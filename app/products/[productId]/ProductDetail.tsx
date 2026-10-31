@@ -2,13 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FiRefreshCw, FiShoppingBag, FiZap } from "react-icons/fi";
 import Header from "../../components/Header/Header";
 import Footer from "../../components/Footer/Footer";
 import { useAuth } from "../../components/Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
+import { openProductCheckout } from "../../lib/paymentApi";
 
 type Product = {
   _id: string;
@@ -29,7 +29,6 @@ function formatPrice(price: number) {
 }
 
 export default function ProductDetail({ productId }: { productId: string }) {
-  const router = useRouter();
   const { user, openSignIn } = useAuth();
   const [productResult, setProductResult] = useState<{ id: string; product: Product | null; error: string } | null>(null);
   const isLoading = productResult?.id !== productId;
@@ -66,14 +65,18 @@ export default function ProductDetail({ productId }: { productId: string }) {
     setPendingAction(action);
     setNotice("");
     try {
-      const result = await addCartItem(product._id);
       if (action === "buy") {
-        router.push(`/me/${encodeURIComponent(user.email)}#cart`);
+        await openProductCheckout(product._id, { name: user.name, email: user.email }, {
+          onVerified: (status, message) => setNotice(status === "paid" ? "Payment successful. Your order is confirmed." : message || "Payment authorized and awaiting confirmation."),
+          onFailure: setNotice,
+          onDismiss: () => setNotice("Checkout was closed. No payment was confirmed."),
+        });
       } else {
+        const result = await addCartItem(product._id);
         setNotice(`Added to your cart · ${result.cart.totalItems} item${result.cart.totalItems === 1 ? "" : "s"} total`);
       }
-    } catch (cartError) {
-      setNotice(cartError instanceof Error ? cartError.message : "Could not add this item to your cart.");
+    } catch (actionError) {
+      setNotice(actionError instanceof Error ? actionError.message : action === "buy" ? "Could not start checkout." : "Could not add this item to your cart.");
     } finally {
       setPendingAction(null);
     }
@@ -145,11 +148,11 @@ export default function ProductDetail({ productId }: { productId: string }) {
                   {pendingAction === "cart" ? <><FiRefreshCw className="animate-spin" size={15} /> Adding…</> : <><FiShoppingBag size={16} /> Add to cart</>}
                 </button>
                 <button type="button" disabled={product.stock < 1 || pendingAction !== null} onClick={() => void handleCartAction("buy")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-4 text-[10px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-50">
-                  {pendingAction === "buy" ? <><FiRefreshCw className="animate-spin" size={15} /> Adding…</> : <><FiZap size={15} /> Buy now</>}
+                  {pendingAction === "buy" ? <><FiRefreshCw className="animate-spin" size={15} /> Preparing…</> : <><FiZap size={15} /> Buy now</>}
                 </button>
               </div>
               {notice && <p aria-live="polite" className="mt-3 text-xs text-[#684768]">{notice}</p>}
-              <p className="mt-4 text-center text-[9px] leading-4 text-[#918792]">Buy now adds this piece to your cart and opens your selection.</p>
+              <p className="mt-4 text-center text-[9px] leading-4 text-[#918792]">Buy now opens Razorpay secure checkout. Your order is confirmed after payment verification.</p>
             </div>
           </div>
         )}

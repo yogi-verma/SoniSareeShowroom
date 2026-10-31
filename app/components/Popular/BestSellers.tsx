@@ -6,6 +6,7 @@ import Link from "next/link";
 import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
 import { useAuth } from "../Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
+import { openProductCheckout } from "../../lib/paymentApi";
 
 type Product = {
   _id: string;
@@ -59,6 +60,7 @@ export default function BestSellers() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
+  const [checkoutProductId, setCheckoutProductId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!message) return;
@@ -66,12 +68,24 @@ export default function BestSellers() {
     return () => window.clearTimeout(timeoutId);
   }, [message]);
 
-  function requestShoppingAction() {
+  async function requestShoppingAction(product: Product) {
     if (!user) {
       openSignIn();
       return;
     }
-    setMessage("Checkout is coming soon. Add the item to your cart to save it.");
+    setCheckoutProductId(product._id);
+    setMessage("");
+    try {
+      await openProductCheckout(product._id, { name: user.name, email: user.email }, {
+        onVerified: (status) => setMessage(status === "paid" ? `Payment successful · ${product.name}` : "Payment authorized and awaiting confirmation."),
+        onFailure: setMessage,
+        onDismiss: () => setMessage("Checkout was closed. No payment was confirmed."),
+      });
+    } catch (checkoutError) {
+      setMessage(checkoutError instanceof Error ? checkoutError.message : "Could not start checkout.");
+    } finally {
+      setCheckoutProductId(null);
+    }
   }
 
   async function handleAddToCart(product: Product) {
@@ -209,10 +223,10 @@ export default function BestSellers() {
                 <button
                   type="button"
                   disabled={!product.stock}
-                  onClick={requestShoppingAction}
+                  onClick={() => void requestShoppingAction(product)}
                   className="min-h-10 rounded-sm bg-plum px-2 text-[9px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[10px]"
                 >
-                  Buy Now
+                  {checkoutProductId === product._id ? "Opening…" : "Buy Now"}
                 </button>
                 <button
                   type="button"
