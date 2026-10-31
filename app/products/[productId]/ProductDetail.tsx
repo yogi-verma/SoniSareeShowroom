@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { FiRefreshCw, FiShoppingBag, FiZap } from "react-icons/fi";
+import { FiRefreshCw, FiShoppingBag, FiZap, FiLoader } from "react-icons/fi";
 import Header from "../../components/Header/Header";
 import Footer from "../../components/Footer/Footer";
 import { useAuth } from "../../components/Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
 import { openProductCheckout } from "../../lib/paymentApi";
+
 
 type Product = {
   _id: string;
@@ -148,7 +149,7 @@ export default function ProductDetail({ productId }: { productId: string }) {
                   {pendingAction === "cart" ? <><FiRefreshCw className="animate-spin" size={15} /> Adding…</> : <><FiShoppingBag size={16} /> Add to cart</>}
                 </button>
                 <button type="button" disabled={product.stock < 1 || pendingAction !== null} onClick={() => void handleCartAction("buy")} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-4 text-[10px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-50">
-                  {pendingAction === "buy" ? <><FiRefreshCw className="animate-spin" size={15} /> Preparing…</> : <><FiZap size={15} /> Buy now</>}
+                  {pendingAction === "buy" ? <><FiLoader size={13} className="animate-spin" aria-hidden="true" /> Redirecting…</> : <><FiZap size={15} /> Buy now</>}
                 </button>
               </div>
               {notice && <p aria-live="polite" className="mt-3 text-xs text-[#684768]">{notice}</p>}

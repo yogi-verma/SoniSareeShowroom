@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
+import { FiArrowLeft, FiArrowRight, FiLoader } from "react-icons/fi";
 import { useAuth } from "../Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
 import { openProductCheckout } from "../../lib/paymentApi";
@@ -226,7 +226,7 @@ export default function BestSellers() {
                   onClick={() => void requestShoppingAction(product)}
                   className="min-h-10 rounded-sm bg-plum px-2 text-[9px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[10px]"
                 >
-                  {checkoutProductId === product._id ? "Opening…" : "Buy Now"}
+                  {checkoutProductId === product._id ? <span className="inline-flex items-center justify-center gap-1.5"><FiLoader size={13} className="animate-spin" aria-hidden="true" /> Redirecting…</span> : "Buy Now"}
                 </button>
                 <button
                   type="button"
