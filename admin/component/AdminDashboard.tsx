@@ -21,6 +21,14 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const logoutDialogRef = useAccessibleDialog(isLogoutModalOpen, isLoggingOut, closeLogoutModal);
 
+  function handleSectionSelect(section: AdminSection) {
+    if (section === "chats") {
+      router.push("/chat?mode=admin");
+      return;
+    }
+    setActiveSection(section);
+  }
+
   async function handleLogout() {
     setIsLoggingOut(true);
     try {
@@ -45,7 +53,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
   return (
     <main className="admin-shell">
       <div className="flex min-h-screen flex-col lg:flex-row">
-        <AdminSidebar activeSection={activeSection} onSelectSection={setActiveSection} />
+        <AdminSidebar activeSection={activeSection} onSelectSection={handleSectionSelect} />
 
         <section className="min-w-0 flex-1">
           <header className="sticky top-0 z-[var(--admin-z-header)] flex min-h-[var(--admin-header-height)] items-center justify-between border-b border-[var(--admin-border)] bg-white px-4 py-2.5 sm:px-5 lg:px-7">
@@ -56,7 +64,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
             <div className="hidden lg:block">
               <p className="text-[11px] text-[var(--admin-subtle)]">Admin workspace</p>
               <p className="mt-0.5 text-[13px] font-semibold">
-                {activeSection === "overview" ? "Your shop at a glance" : activeSection === "sales" ? "Sales performance" : activeSection === "purchasing" ? "Purchasing" : activeSection === "inventory" ? "Inventory" : activeSection === "orders" ? "Customer orders" : "User accounts"}
+                {activeSection === "overview" ? "Your shop at a glance" : activeSection === "sales" ? "Sales performance" : activeSection === "purchasing" ? "Purchasing" : activeSection === "inventory" ? "Inventory" : activeSection === "orders" ? "Customer orders" : activeSection === "chats" ? "Customer conversations" : "User accounts"}
               </p>
             </div>
             <div className="ml-auto flex items-center gap-3">

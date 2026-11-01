@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FiClipboard, FiGrid, FiPackage, FiShoppingBag, FiTrendingUp, FiUsers } from "react-icons/fi";
+import { FiClipboard, FiGrid, FiMessageCircle, FiPackage, FiShoppingBag, FiTrendingUp, FiUsers } from "react-icons/fi";
 
-export type AdminSection = "overview" | "sales" | "purchasing" | "inventory" | "orders" | "users";
+export type AdminSection = "overview" | "sales" | "purchasing" | "inventory" | "orders" | "users" | "chats";
 
 type AdminSidebarProps = {
   activeSection: AdminSection;
@@ -16,7 +16,8 @@ const sections = [
   { id: "purchasing", label: "Purchasing", icon: FiShoppingBag },
   { id: "inventory", label: "Inventory", icon: FiPackage },
   { id: "orders", label: "Orders", icon: FiClipboard },
-  { id: "users", label: "Users", icon: FiUsers }
+  { id: "users", label: "Users", icon: FiUsers },
+  { id: "chats", label: "Chats", icon: FiMessageCircle }
 ] as const;
 
 export default function AdminSidebar({ activeSection, onSelectSection }: AdminSidebarProps) {

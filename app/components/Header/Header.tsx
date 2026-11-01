@@ -13,6 +13,7 @@ const navigation = [
   { label: "Home", href: "/" },
   // { label: "Shop", href: "#shop" },
   { label: "Collections", href: "/categories" },
+  { label: "Chat", href: "/chat" },
 ];
 
 function Navigation({ mobile = false }: { mobile?: boolean }) {
