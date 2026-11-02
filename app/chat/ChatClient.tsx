@@ -424,9 +424,13 @@ export default function ChatClient() {
   );
 
   return (
-    <main className="min-h-screen bg-[#f1eff3] p-0 text-[#292431] sm:p-4 lg:p-6">
-      <section className="mx-auto flex h-[100dvh] max-w-[1500px] flex-col overflow-hidden bg-white shadow-[0_24px_80px_rgba(45,31,52,0.13)] sm:h-[calc(100dvh-32px)] sm:rounded-[22px] sm:border sm:border-[#e9e5eb] lg:h-[calc(100dvh-48px)]">
-        <header className="flex h-[72px] shrink-0 items-center justify-between border-b border-[#eeebf0] bg-white px-4 sm:px-6 lg:px-8">
+    <main className={`${isAdmin ? 'min-h-screen bg-[#f1eff3] p-0 sm:p-4 lg:p-6' : 'min-h-screen bg-[#f7f3f6] pb-0 sm:px-6 sm:pb-6'} text-[#292431]`}>
+      {!isAdmin && <header className="sticky top-0 z-20 flex h-[76px] items-center gap-3 border-b border-[#eee7ec] bg-white/95 px-5 rounded-[22px] mt-1 backdrop-blur">
+        <Link href="/" className="flex shrink-0 items-center gap-3" aria-label="Soni Saree Showroom home"><span className="grid h-10 w-10 place-items-center rounded-full bg-[#532a50] font-serif text-xl text-white">❋</span><span><span className="block font-serif text-[17px] leading-3 text-[#342735]">Soni Saree</span><span className="text-[9px] font-semibold uppercase tracking-[.2em] text-[#9b7955]">Showroom</span></span></Link>
+        <nav aria-label="Main navigation" className="ml-auto flex shrink-0 items-center gap-2 sm:gap-6">{[['Home', '/'], ['Collection', '/categories'], ['Profile', user?.email ? `/me/${encodeURIComponent(user.email)}` : '/']].map(([label, href]) => <Link key={label} href={href} onClick={label === 'Profile' && !user ? (event) => { event.preventDefault(); openSignIn(); } : undefined} className="group relative py-2 text-[11px] font-medium text-[#756b75] transition-colors hover:text-[#532a50] after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-[#532a50] after:transition-transform after:duration-300 after:content-[''] hover:after:origin-left hover:after:scale-x-100 sm:text-[13px]">{label}</Link>)}</nav>
+      </header>}
+      <section className={`mx-auto flex ${isAdmin ? 'h-[100dvh] max-w-[1500px] sm:h-[calc(100dvh-32px)] lg:h-[calc(100dvh-48px)]' : 'h-[calc(100dvh-76px)] max-w-[1600px] sm:h-[calc(100dvh-108px)] sm:overflow-hidden sm:rounded-[22px] sm:border sm:border-[#eadfe8]'} flex-col overflow-hidden bg-white shadow-[0_24px_80px_rgba(45,31,52,0.13)] ${isAdmin ? 'sm:rounded-[22px] sm:border sm:border-[#e9e5eb]' : ''}`}>
+        {isAdmin && <header className="flex h-[72px] shrink-0 items-center justify-between border-b border-[#eeebf0] bg-white px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             {isAdmin ? <Link href="/admin/sonisaree" aria-label="Back to admin dashboard" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#e9e5eb] text-[#625b69] transition hover:border-[#d8cbdc] hover:bg-[#faf7fb]"><FiArrowLeft size={17} /></Link> : <Link href="/" aria-label="Back to showroom" className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-[#532a50] font-serif text-xl text-white shadow-[0_5px_14px_rgba(83,42,80,0.22)]">❋</Link>}
             <div className="min-w-0">
@@ -442,11 +446,11 @@ export default function ChatClient() {
             {!isAdmin && <Link href="/categories" className="hidden h-9 items-center gap-2 rounded-xl border border-[#e9e5eb] px-3 text-[10px] font-semibold text-[#625b69] transition hover:bg-[#faf7fb] sm:flex">Explore collection <FiArrowUpRight size={13} /></Link>}
             {isAdmin && <span title={adminName} className="grid h-9 w-9 place-items-center rounded-xl bg-[#f1eaf2] font-serif text-sm font-semibold text-[#684768]">{initials(adminName)}</span>}
           </div>
-        </header>
+        </header>}
 
         <div className="flex min-h-0 flex-1">
           {isAdmin && (
-            <aside className={`${mobileInbox && selectedId ? 'flex' : selectedId ? 'hidden' : 'flex'} w-full shrink-0 flex-col border-r border-[#ece9ee] bg-[#faf9fb] md:flex md:w-[318px] lg:w-[350px]`}>
+            <aside className={`${mobileInbox && selectedId ? 'flex' : selectedId ? 'hidden' : 'flex'} w-full shrink-0 flex-col border-r border-[#ece9ee] bg-[#faf9fb] md:flex md:w-[340px] lg:w-[370px]`}>
               <div className="px-4 pb-4 pt-5 sm:px-5">
                 <div className="flex items-center justify-between">
                   <div><p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#9a7652]">Support inbox</p><h2 className="mt-1 font-serif text-[24px] leading-7 text-[#2d2632]">Messages</h2></div>
@@ -465,12 +469,12 @@ export default function ChatClient() {
               <div className="min-h-0 flex-1 overflow-y-auto border-t border-[#efedf1] px-2 py-2">
                 {visibleConversations.length ? visibleConversations.map((item) => {
                   const active = selectedId === item.id;
-                  return <button type="button" key={item.id} onClick={() => openConversation(item.id)} className={`mb-1 flex w-full items-start gap-3 rounded-xl p-3 text-left transition ${active ? 'bg-[#efe8f1] ring-1 ring-inset ring-[#e8dce9]' : 'hover:bg-[#f1eff3]'}`}>
+                  return <button type="button" key={item.id} onClick={() => openConversation(item.id)} className={`mb-1 flex w-full items-start gap-3 rounded-2xl p-3.5 text-left transition ${active ? 'bg-[#efe8f1] ring-1 ring-inset ring-[#e8dce9]' : 'hover:bg-[#f1eff3]'}`}>
                     <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#e9dfea] font-serif text-[13px] font-semibold text-[#684768]">{item.user?.picture ? <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={item.user.picture} alt="" className="h-full w-full object-cover" />
                     </> : initials(item.user?.name)}<i className={`absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-xl border-2 border-white ${item.userPresence?.status === 'online' ? 'bg-[#63a279]' : 'bg-[#c4bec8]'}`} /></span>
-                    <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><span className="truncate text-[12px] font-semibold text-[#342d39]">{item.user?.name || 'Customer'}</span><span className="shrink-0 text-[9px] text-[#98919c]">{formatDay(item.lastMessageAt)}</span></span><span className="mt-2 flex items-center justify-between gap-2"><span className="truncate text-[11px] text-[#6f6875]">{item.lastMessageBy === 'admin' && <span className="font-semibold text-[#837b88]">You: </span>}{item.lastMessage || 'Started a conversation'}</span>{item.unreadByAdmin > 0 && <span className="grid h-[19px] min-w-[19px] shrink-0 place-items-center rounded-md bg-[#532a50] px-1 text-[9px] font-bold text-white">{item.unreadByAdmin}</span>}</span></span>
+                    <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><span className="truncate text-[13px] font-semibold text-[#342d39]">{item.user?.name || 'Customer'}</span><span className="shrink-0 text-[10px] text-[#98919c]">{formatDay(item.lastMessageAt)}</span></span><span className="mt-2 flex items-center justify-between gap-2"><span className="truncate text-[12px] text-[#6f6875]">{item.lastMessageBy === 'admin' && <span className="font-semibold text-[#837b88]">You: </span>}{item.lastMessage || 'Started a conversation'}</span>{item.unreadByAdmin > 0 && <span className="grid h-[19px] min-w-[19px] shrink-0 place-items-center rounded-md bg-[#532a50] px-1 text-[9px] font-bold text-white">{item.unreadByAdmin}</span>}</span></span>
                   </button>;
                 }) : <div className="mx-3 mt-8 rounded-2xl border border-dashed border-[#ddd6e0] bg-white/70 px-5 py-8 text-center"><span className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#f0ebf2] text-[#684768]"><FiMessageCircle size={18} /></span><p className="mt-3 text-[11px] font-semibold text-[#514650]">{search || inboxFilter !== 'all' ? 'No conversations found' : 'Your inbox is ready'}</p><p className="mt-1 text-[10px] leading-4 text-[#918a95]">{search || inboxFilter !== 'all' ? 'Try another search or filter.' : 'Customer messages will appear here.'}</p></div>}
               </div>
@@ -481,11 +485,11 @@ export default function ChatClient() {
           <section className={`${isAdmin && (!selectedId || mobileInbox) ? 'hidden md:flex' : 'flex'} min-w-0 flex-1 flex-col bg-[#f7f7f9]`}>
             {(!isAdmin || selectedId) ? <div className="flex min-h-0 flex-1">
               <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex h-[70px] shrink-0 items-center justify-between border-b border-[#ece9ee] bg-white px-4 sm:px-6">
+                <div className="flex h-[78px] shrink-0 items-center justify-between border-b border-[#ece9ee] bg-white px-4 sm:px-6">
                   <div className="flex min-w-0 items-center gap-3">
                     {isAdmin && <button type="button" onClick={() => setMobileInbox(true)} aria-label="Back to conversations" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#766d79] transition hover:bg-[#f1eff3] md:hidden"><FiChevronLeft size={19} /></button>}
                     <span className={`relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl ${isAdmin ? 'bg-[#eee5f0] font-serif text-sm font-semibold text-[#684768]' : 'bg-[#532a50] text-white'}`}>{isAdmin ? initials(otherName) : <FiMessageCircle size={18} />}{peerPresence?.status === 'online' && <i className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#63a279]" />}</span>
-                    <div className="min-w-0"><h2 className="truncate text-[12px] font-semibold text-[#332c38]">{isAdmin ? otherName : 'Soni Saree Showroom'}</h2><p className="mt-0.5 truncate text-[10px] text-[#89828d]">{isAdmin ? `${conversation?.user?.email || 'Customer conversation'} · ${presenceLabel}` : `Showroom support · ${presenceLabel}`}</p></div>
+                    <div className="min-w-0"><h2 className="truncate text-[14px] font-semibold text-[#332c38]">{isAdmin ? otherName : 'Soni Saree Showroom'}</h2><p className="mt-0.5 truncate text-[11px] text-[#89828d]">{isAdmin ? `${conversation?.user?.email || 'Customer conversation'} · ${presenceLabel}` : `Showroom support · ${presenceLabel}`}</p></div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[9px] font-semibold sm:inline-flex ${conversation?.status === 'closed' ? 'bg-[#f1eff3] text-[#807987]' : 'bg-[#eef7f1] text-[#397556]'}`}><span className={`h-1.5 w-1.5 rounded-full ${conversation?.status === 'closed' ? 'bg-[#aaa3ae]' : 'bg-[#63a279]'}`} />{conversation?.status === 'closed' ? 'Resolved' : 'Active chat'}</span>
@@ -510,7 +514,7 @@ export default function ChatClient() {
                           <div className={`mb-3.5 flex ${own ? 'justify-end' : 'justify-start'}`}>
                             {!own && <span className="mr-2 mt-auto grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#e9e0eb] font-serif text-[9px] font-semibold text-[#684768]">{initials(isAdmin ? otherName : 'Soni')}</span>}
                             <div className={`max-w-[min(82%,560px)] px-4 py-3 ${own ? 'rounded-[16px] rounded-br-[5px] bg-[#532a50] text-white shadow-[0_4px_12px_rgba(83,42,80,0.14)]' : 'rounded-[16px] rounded-bl-[5px] border border-[#e9e5eb] bg-white text-[#37313d] shadow-[0_3px_10px_rgba(45,31,52,0.035)]'}`}>
-                              <p className="whitespace-pre-wrap break-words text-[12px] leading-[1.7]">{message.body}</p>
+                              <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.7]">{message.body}</p>
                               <span className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] ${own ? 'text-white/60' : 'text-[#9a939e]'}`}>{formatTime(message.createdAt)}{own && <MessageTicks seen={Boolean(message.seenAt)} />}</span>
                             </div>
                           </div>
