@@ -57,8 +57,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
 
         <section className="min-w-0 flex-1">
           <header className="sticky top-0 z-[var(--admin-z-header)] flex min-h-[var(--admin-header-height)] items-center justify-between border-b border-[var(--admin-border)] bg-white px-4 py-2.5 sm:px-5 lg:px-7">
-            <div className="flex items-center gap-3 lg:hidden">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-plum font-serif text-base text-white">❋</span>
+            <div className="flex items-center gap-3 pl-12 lg:hidden">
               <span className="font-serif text-sm">Soni Saree Showroom</span>
             </div>
             <div className="hidden lg:block">
