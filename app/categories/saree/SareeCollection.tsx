@@ -176,7 +176,7 @@ export default function SareeCollection({ title, editTitle, description, categor
                 </div>
                 <div className="flex flex-1 flex-col p-3 sm:p-4">
                   <h3 className="min-h-7 font-serif text-[13px] leading-snug text-[#302531] sm:text-[15px]"><Link href={`/products/${encodeURIComponent(product._id)}`} className="rounded-sm hover:text-[#684768] focus-visible:outline-2 focus-visible:outline-[#986d8f]">{product.name}</Link></h3>
-                  <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2">
                     <strong className="text-[12px] font-semibold text-[#251c25] sm:text-[14px]">{formatPrice(product.price)}</strong>
                     <span className={`text-[8px] font-medium sm:text-[9px] ${product.stock > 0 ? "text-[#54745f]" : "text-[#a13d39]"}`}>{product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}</span>
                   </div>

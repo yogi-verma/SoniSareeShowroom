@@ -216,10 +216,10 @@ export default function BestSellers() {
               <h3 className="mt-1.5 min-h-7 font-serif text-[14px] leading-snug text-[#302531] sm:text-[15px]">
                 <Link href={`/products/${encodeURIComponent(product._id)}`} className="rounded-sm hover:text-[#684768] focus-visible:outline-2 focus-visible:outline-[#986d8f]">{product.name}</Link>
               </h3>
-              <div className="mt-2 flex items-baseline gap-2">
+              <div className="flex items-baseline gap-2">
                 <strong className="text-[13px] font-semibold text-ink">{formatPrice(product.price)}</strong>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   disabled={!product.stock}
