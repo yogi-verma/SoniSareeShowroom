@@ -331,22 +331,23 @@ export default function ProductDetail({ productId }: { productId: string }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#faf7f2] text-[#302531]">
+    <main className="relative isolate min-h-screen bg-[#faf7f2] text-[#302531]">
       <Header />
-      <section className="mx-auto max-w-7xl px-4 pb-12 pt-24 sm:px-6 sm:pb-16 sm:pt-28 lg:px-8">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[220px] bg-gradient-to-br from-[#40233e] via-[#30172f] to-[#211821]" />
+      <section className="relative z-10 mx-auto max-w-7xl px-4 pb-8 pt-30 sm:px-6 lg:px-8">
         <nav
           aria-label="Breadcrumb"
-          className="mb-4 flex items-center gap-2 text-[10px] text-[#8b7f89] sm:mb-5 sm:text-[11px]"
+          className="mb-4 flex w-fit max-w-full items-center gap-2 px-3 py-2 text-[11px] text-white/85 backdrop-blur-sm sm:text-xs"
         >
-          <Link href="/" className="transition hover:text-[#684768]">
+          <Link href="/" className="shrink-0 underline-offset-4 transition hover:text-white hover:underline">
             Home
           </Link>
-          <span aria-hidden="true">/</span>
-          <Link href="/categories" className="transition hover:text-[#684768]">
+          <span aria-hidden="true" className="text-white/55">/</span>
+          <Link href="/categories" className="shrink-0 underline-offset-4 transition hover:text-white hover:underline">
             Collections
           </Link>
-          <span aria-hidden="true">/</span>
-          <span className="truncate font-medium capitalize text-[#684768]">
+          <span aria-hidden="true" className="text-white/55">/</span>
+          <span className="truncate font-semibold capitalize text-white">
             {product?.productType || "Product"}
           </span>
         </nav>

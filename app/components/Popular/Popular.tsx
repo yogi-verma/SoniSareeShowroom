@@ -52,7 +52,7 @@ export default function Popular() {
     <>
       <section
         id="collections"
-        className="relative mx-auto max-w-6xl px-[6%] py-9 md:px-0"
+        className="relative mx-auto max-w-6xl px-[6%] pb-9 md:px-0"
       >
         <div className="mb-4 flex items-end justify-between gap-4">
           <div>
