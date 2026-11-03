@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FiArrowLeft, FiArrowRight, FiLoader } from "react-icons/fi";
 import { useAuth } from "../Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
 import { openProductCheckout } from "../../lib/paymentApi";
+import { useStockRefresh } from "../../lib/useStockRefresh";
 
 type Product = {
   _id: string;
@@ -61,6 +62,13 @@ export default function BestSellers() {
   const [message, setMessage] = useState("");
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
   const [checkoutProductId, setCheckoutProductId] = useState<string | null>(null);
+
+  const refreshProducts = useCallback(async () => {
+    const result = await fetchSarees();
+    setProducts(result);
+  }, []);
+
+  useStockRefresh(refreshProducts);
 
   useEffect(() => {
     if (!message) return;

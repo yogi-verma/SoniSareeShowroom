@@ -7,6 +7,7 @@ import { FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
 import { useAuth } from "../../components/Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
 import { openProductCheckout } from "../../lib/paymentApi";
+import { useStockRefresh } from "../../lib/useStockRefresh";
 
 type SareeProduct = {
   _id: string;
@@ -59,6 +60,8 @@ export default function SareeCollection({ title, editTitle, description, categor
       setIsLoading(false);
     }
   }, [category]);
+
+  useStockRefresh(loadProducts);
 
   useEffect(() => {
     const controller = new AbortController();

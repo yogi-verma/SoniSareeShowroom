@@ -20,6 +20,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { createProduct, deleteProduct, getProducts, updateProduct } from "../../../utils/adminApi";
+import { useStockRefresh } from "../../../../app/lib/useStockRefresh";
 import type { Product, ProductCategory, ProductType } from "../../../utils/adminApi";
 import { useAccessibleDialog } from "../useAccessibleDialog";
 
@@ -199,6 +200,8 @@ export default function Inventory() {
       setIsLoading(false);
     }
   }, []);
+
+  useStockRefresh(loadProducts);
 
   useEffect(() => {
     let isCurrent = true;

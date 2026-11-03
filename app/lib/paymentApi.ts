@@ -107,6 +107,7 @@ async function openCheckout(
         .then((verification) => {
           if (verification.status === "paid") {
             window.dispatchEvent(new Event("soni:order-updated"));
+            window.dispatchEvent(new Event("soni:stock-updated"));
             if (clearCartAfterPayment) window.dispatchEvent(new Event("soni:cart-updated"));
           }
           callbacks.onVerified(verification.status, verification.message);

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   FiChevronLeft,
   FiChevronRight,
@@ -18,6 +18,7 @@ import Footer from "../../components/Footer/Footer";
 import { useAuth } from "../../components/Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
 import { openProductCheckout } from "../../lib/paymentApi";
+import { useStockRefresh } from "../../lib/useStockRefresh";
 import {
   getProductReviews,
   saveProductReview,
@@ -85,6 +86,16 @@ export default function ProductDetail({ productId }: { productId: string }) {
   const photos = [product?.photo, ...(product?.additionalPhotos ?? [])].filter(
     (photo): photo is { url: string } => Boolean(photo?.url),
   );
+
+  const refreshProductStock = useCallback(async () => {
+    const response = await fetch(`/api/catalog/products/${encodeURIComponent(productId)}`, { cache: "no-store" });
+    const result = await response.json().catch(() => ({}));
+    if (response.ok && result.product) {
+      setProductResult({ id: productId, product: result.product, error: "" });
+    }
+  }, [productId]);
+
+  useStockRefresh(refreshProductStock);
 
   useEffect(() => {
     const controller = new AbortController();

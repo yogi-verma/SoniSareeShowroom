@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FiRefreshCw, FiShoppingBag } from "react-icons/fi";
 import Header from "../components/Header/Header";
 import Footer from "../components/Footer/Footer";
+import { useStockRefresh } from "../lib/useStockRefresh";
 
 type ProductType = "shut" | "rajputi poshak";
 type Product = {
@@ -26,6 +27,15 @@ export default function CategoryProducts({ categoryName, collectionName, product
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const refreshProducts = useCallback(async () => {
+    const params = new URLSearchParams({ productType });
+    const response = await fetch(`/api/catalog/products?${params}`, { cache: "no-store" });
+    const result = await response.json().catch(() => ({}));
+    if (response.ok) setProducts(result.products ?? []);
+  }, [productType]);
+
+  useStockRefresh(refreshProducts);
 
   useEffect(() => {
     const controller = new AbortController();
