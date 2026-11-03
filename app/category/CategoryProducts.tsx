@@ -92,20 +92,20 @@ export default function CategoryProducts({ categoryName, collectionName, product
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
             {products.map((product) => (
-              <article key={product._id} className="group overflow-hidden border border-[#e9e0d9] bg-white shadow-[0_4px_18px_rgba(43,27,38,0.045)] transition hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(43,27,38,0.12)]">
-                <Link href={`/products/${encodeURIComponent(product._id)}`} aria-label={`View ${product.name}`} className="block">
+              <article key={product._id} className={`group overflow-hidden border border-[#e9e0d9] bg-white shadow-[0_4px_18px_rgba(43,27,38,0.045)] transition ${product.stock > 0 ? "hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(43,27,38,0.12)]" : "cursor-sold-out"}`}>
                   <div className="relative aspect-[4/4.8] overflow-hidden bg-[#eee6e0]">
+                    {product.stock > 0 ? <Link href={`/products/${encodeURIComponent(product._id)}`} aria-label={`View ${product.name}`} className="absolute inset-0 z-[1]" /> : null}
                     {product.photo?.url ? <Image src={product.photo.url} alt={product.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" unoptimized className="object-cover transition-transform duration-700 group-hover:scale-[1.045]" /> : <div className="grid h-full place-items-center text-xs text-[#817681]">Image unavailable</div>}
                     <span className="absolute left-2.5 top-2.5 rounded-full bg-[#fffaf4]/95 px-2 py-1.5 text-[7px] font-semibold tracking-[0.12em] text-[#684768] shadow-sm sm:text-[8px]">{product.category}</span>
+                    {product.stock === 0 && <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-white/90 py-2 text-center text-xs font-bold tracking-[0.16em] text-[#b42323] shadow-sm">SOLD OUT</span>}
                   </div>
                   <div className="p-3 sm:p-4">
-                    <h3 className="min-h-8 font-serif text-[13px] leading-snug text-[#302531] sm:text-[15px]">{product.name}</h3>
+                    <h3 className="min-h-8 font-serif text-[13px] leading-snug text-[#302531] sm:text-[15px]">{product.stock > 0 ? <Link href={`/products/${encodeURIComponent(product._id)}`}>{product.name}</Link> : product.name}</h3>
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <strong className="text-xs font-semibold text-[#251c25] sm:text-sm">{formatPrice(product.price)}</strong>
-                      <span className={`text-[8px] font-medium sm:text-[9px] ${product.stock > 0 ? "text-[#54745f]" : "text-[#a13d39]"}`}>{product.stock > 0 ? "In stock" : "Out of stock"}</span>
+                      <span className={`text-[8px] font-semibold sm:text-[9px] ${product.stock > 0 ? "text-[#54745f]" : "text-[#b42323]"}`}>{product.stock > 0 ? "In stock" : "Available soon"}</span>
                     </div>
                   </div>
-                </Link>
               </article>
             ))}
           </div>

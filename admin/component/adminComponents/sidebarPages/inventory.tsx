@@ -11,6 +11,7 @@ import {
   FiMoreVertical,
   FiEdit2,
   FiLoader,
+  FiMinus,
   FiPackage,
   FiPlus,
   FiRefreshCw,
@@ -19,7 +20,7 @@ import {
   FiTrash2,
   FiX,
 } from "react-icons/fi";
-import { createProduct, deleteProduct, getProducts, updateProduct } from "../../../utils/adminApi";
+import { createProduct, deleteProduct, getProducts, updateProduct, updateProductStock } from "../../../utils/adminApi";
 import { useStockRefresh } from "../../../../app/lib/useStockRefresh";
 import type { Product, ProductCategory, ProductType } from "../../../utils/adminApi";
 import { useAccessibleDialog } from "../useAccessibleDialog";
@@ -159,6 +160,7 @@ export default function Inventory() {
   const [openProductMenuId, setOpenProductMenuId] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [updatingStockIds, setUpdatingStockIds] = useState<string[]>([]);
   const [deleteError, setDeleteError] = useState("");
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [formError, setFormError] = useState("");
@@ -246,6 +248,21 @@ export default function Inventory() {
       return matchesType && matchesSearch;
     });
   }, [products, search, typeFilter]);
+
+  async function adjustStock(product: Product, delta: -1 | 1) {
+    const nextStock = product.stock + delta;
+    if (nextStock < 0 || updatingStockIds.includes(product._id)) return;
+    setUpdatingStockIds((current) => [...current, product._id]);
+    try {
+      const result = await updateProductStock(product._id, nextStock);
+      setProducts((current) => current.map((item) => item._id === product._id ? result.product : item));
+      window.dispatchEvent(new Event("soni:stock-updated"));
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not update product quantity.");
+    } finally {
+      setUpdatingStockIds((current) => current.filter((id) => id !== product._id));
+    }
+  }
 
   function closeModal() {
     if (isSaving) return;
@@ -463,6 +480,7 @@ export default function Inventory() {
                 <div className="relative aspect-[4/3] overflow-hidden bg-[#f6f2ed]">
                   <img src={product.photo.url} alt={product.name} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
                   <span className="absolute left-1.5 top-1.5 rounded-full border border-white/70 bg-white/90 px-2 py-0.5 text-[8px] font-semibold capitalize text-[#514852] shadow-sm sm:left-2 sm:top-2 sm:text-[9px]">{product.productType}</span>
+                  {product.stock === 0 && <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-white/90 py-2 text-center text-xs font-bold tracking-[0.18em] text-[#b42323] shadow-sm">SOLD OUT</span>}
                 </div>
                 <div className="pt-2 sm:pt-2.5 px-2 sm:px-2.5">
                   <h3 className="line-clamp-2 min-h-6 text-[11px] font-semibold leading-4 text-[var(--admin-charcoal)] sm:text-xs" title={product.name}>{product.name}</h3>
@@ -470,8 +488,16 @@ export default function Inventory() {
                   <div className=" flex items-center justify-between gap-1 py-1">
                     <span className="truncate font-serif text-xs text-plum sm:text-sm">{formatPrice(product.price)}</span>
                     <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-semibold ${product.stock === 0 ? "bg-[#fff0ef] text-[#a13d39]" : product.stock <= 5 ? "bg-[#fbf3e3] text-[#8a682e]" : "bg-[#edf6f1] text-[#356b57]"}`}>
-                      {product.stock === 0 ? "Out" : `Qty ${product.stock}`}
+                      {`Qty ${product.stock}`}
                     </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-[var(--admin-border)] py-1.5" aria-label={`Stock quantity controls for ${product.name}`}>
+                    <span className="text-[9px] font-medium text-[var(--admin-muted)]">Adjust quantity</span>
+                    <div className="flex items-center gap-1.5">
+                      <button type="button" onClick={() => void adjustStock(product, -1)} disabled={product.stock === 0 || updatingStockIds.includes(product._id)} aria-label={`Decrease ${product.name} quantity`} className="grid h-7 w-7 place-items-center rounded-md border border-[var(--admin-border-strong)] bg-white text-[var(--admin-charcoal)] hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-45"><FiMinus size={13} /></button>
+                      <span className="min-w-5 text-center text-[11px] font-semibold text-[var(--admin-charcoal)]">{product.stock}</span>
+                      <button type="button" onClick={() => void adjustStock(product, 1)} disabled={updatingStockIds.includes(product._id)} aria-label={`Increase ${product.name} quantity`} className="grid h-7 w-7 place-items-center rounded-md border border-[var(--admin-border-strong)] bg-white text-[var(--admin-charcoal)] hover:bg-[#f6eef4] disabled:cursor-wait disabled:opacity-45"><FiPlus size={13} /></button>
+                    </div>
                   </div>
                 </div>
               </article>

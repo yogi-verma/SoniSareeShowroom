@@ -411,6 +411,7 @@ export default function ProductDetail({ productId }: { productId: string }) {
                 <span className="absolute left-5 top-5 rounded-full border border-white/70 bg-[#fffdfa]/90 px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#684768] shadow-sm backdrop-blur-sm">
                   {product.category}
                 </span>
+                {product.stock === 0 && <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-white/90 py-2 text-center text-sm font-bold tracking-[0.18em] text-[#b42323] shadow-sm">SOLD OUT · AVAILABLE SOON</span>}
                 {photos.length > 1 && (
                   <>
                     <button
@@ -525,7 +526,7 @@ export default function ProductDetail({ productId }: { productId: string }) {
                   />
                   {product.stock > 0
                     ? `${product.stock} available`
-                    : "Out of stock"}
+                    : "Available soon"}
                 </span>
               </div>
 
@@ -647,9 +648,9 @@ export default function ProductDetail({ productId }: { productId: string }) {
                   {relatedProducts.map((item) => (
                     <article
                       key={item._id}
-                      className="group overflow-hidden rounded-lg border border-[#eadfd8] bg-[#fffdfa] transition hover:-translate-y-0.5 hover:shadow-md"
+                      className={`group relative overflow-hidden rounded-lg border border-[#eadfd8] bg-[#fffdfa] transition ${item.stock > 0 ? "hover:-translate-y-0.5 hover:shadow-md" : "cursor-sold-out"}`}
                     >
-                      <Link href={`/products/${item._id}`} className="block">
+                      <Link href={`/products/${item._id}`} onClick={(event) => { if (item.stock === 0) event.preventDefault(); }} aria-disabled={item.stock === 0} tabIndex={item.stock === 0 ? -1 : undefined} className="block">
                         <div className="relative aspect-[4/3.6] bg-[#f1eae4]">
                           {item.photo?.url ? (
                             <Image
@@ -729,6 +730,7 @@ export default function ProductDetail({ productId }: { productId: string }) {
                           </p>
                         )}
                       </div>
+                      {item.stock === 0 && <div className="absolute inset-0 z-20 grid cursor-sold-out place-content-center gap-1 bg-white/75 text-center"><span className="text-xs font-bold tracking-[0.16em] text-[#b42323]">SOLD OUT</span><span className="text-[10px] font-semibold text-[#b42323]">Available soon</span></div>}
                     </article>
                   ))}
                 </div>

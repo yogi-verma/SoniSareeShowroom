@@ -195,10 +195,10 @@ export default function BestSellers() {
           <article
             key={product._id}
             data-product-card
-            className="group flex w-[76%] min-w-[230px] shrink-0 snap-start flex-col overflow-hidden rounded-sm border border-[#eadfd8] bg-[#fffdfa] shadow-[0_3px_16px_rgba(43,27,38,0.05)] transition-shadow hover:shadow-[0_12px_30px_rgba(43,27,38,0.13)] sm:w-[47%] md:w-[31%] lg:w-[calc((100%-3rem)/4)] xl:w-[calc((100%-4rem)/5)]"
+            className={`group flex w-[76%] min-w-[230px] shrink-0 snap-start flex-col overflow-hidden rounded-sm border border-[#eadfd8] bg-[#fffdfa] shadow-[0_3px_16px_rgba(43,27,38,0.05)] transition-shadow sm:w-[47%] md:w-[31%] lg:w-[calc((100%-3rem)/4)] xl:w-[calc((100%-4rem)/5)] ${product.stock > 0 ? "hover:shadow-[0_12px_30px_rgba(43,27,38,0.13)]" : "cursor-sold-out"}`}
           >
             <div className="relative aspect-[4/4.8] overflow-hidden bg-[#eee6e0]">
-              <Link href={`/products/${encodeURIComponent(product._id)}`} aria-label={`View ${product.name}`} className="absolute inset-0 z-[1]">
+              {product.stock > 0 && <Link href={`/products/${encodeURIComponent(product._id)}`} aria-label={`View ${product.name}`} className="absolute inset-0 z-[1]"><span className="sr-only">View {product.name}</span></Link>}
                 <Image
                   src={product.photo.url}
                   alt={product.name}
@@ -208,21 +208,21 @@ export default function BestSellers() {
                   loading={index < 5 ? "eager" : "lazy"}
                   className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                 />
-              </Link>
               <span className="absolute left-3 top-3 rounded-sm bg-[#fffaf4]/95 px-2.5 py-1.5 text-[7px] font-semibold tracking-[0.12em] text-[#684768] shadow-sm sm:text-[8px]">
                 {product.category}
               </span>
               <span className="absolute bottom-3 right-3 rounded-full bg-[#211821]/75 px-2.5 py-1 text-[8px] text-white backdrop-blur-sm">
                 {String(index + 1).padStart(2, "0")} / {String(products.length).padStart(2, "0")}
               </span>
+              {product.stock === 0 && <span className="absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 bg-white/90 py-2 text-center text-xs font-bold tracking-[0.16em] text-[#b42323] shadow-sm">SOLD OUT</span>}
             </div>
 
             <div className="flex flex-1 flex-col p-3 sm:p-4">
               <span className={`text-[8px] font-medium uppercase tracking-[0.16em] ${product.stock > 0 ? "text-[#54745f]" : "text-[#a13d39]"}`}>
-                {product.stock > 0 ? `${product.stock} IN STOCK` : "OUT OF STOCK"}
+                {product.stock > 0 ? `${product.stock} IN STOCK` : "AVAILABLE SOON"}
               </span>
               <h3 className="mt-1.5 min-h-7 font-serif text-[14px] leading-snug text-[#302531] sm:text-[15px]">
-                <Link href={`/products/${encodeURIComponent(product._id)}`} className="rounded-sm hover:text-[#684768] focus-visible:outline-2 focus-visible:outline-[#986d8f]">{product.name}</Link>
+                {product.stock > 0 ? <Link href={`/products/${encodeURIComponent(product._id)}`} className="rounded-sm hover:text-[#684768] focus-visible:outline-2 focus-visible:outline-[#986d8f]">{product.name}</Link> : product.name}
               </h3>
               <div className="flex items-baseline gap-2">
                 <strong className="text-[13px] font-semibold text-ink">{formatPrice(product.price)}</strong>

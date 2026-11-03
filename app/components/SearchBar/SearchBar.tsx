@@ -11,6 +11,7 @@ type Product = {
   category: string;
   name: string;
   price: number;
+  stock: number;
   photo?: { url?: string };
 };
 
@@ -176,11 +177,17 @@ export default function SearchBar() {
                   : products.length ? <>
                     <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-[#958a93]">Matching pieces</p>
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {products.map((product) => <Link key={product._id} href={`/products/${encodeURIComponent(product._id)}`} onClick={closeSearch} className="group flex min-w-0 items-center gap-3 rounded-xl border border-[#eee7e1] bg-white p-2 transition hover:border-[#cbb8c8] hover:bg-[#fffdfa] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-[#986d8f]">
-                        <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f0e9e4]">{product.photo?.url ? <Image src={product.photo.url} alt="" fill unoptimized sizes="56px" className="object-cover transition duration-300 group-hover:scale-105" /> : <span className="grid h-full place-items-center text-[8px] text-[#9a778f]">No image</span>}</div>
-                        <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-[#302531] group-hover:text-[#684768]">{product.name}</span><span className="mt-1 block truncate text-[9px] capitalize text-[#817681]">{product.productType} · {product.category}</span><span className="mt-1 block text-[10px] font-semibold text-[#684768]">{formatPrice(product.price)}</span></span>
-                        <FiArrowRight size={14} className="mr-1 shrink-0 text-[#a99ba7] transition group-hover:translate-x-0.5 group-hover:text-[#684768]" />
-                      </Link>)}
+                      {products.map((product) => {
+                        const card = <>
+                          <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f0e9e4]">{product.photo?.url ? <Image src={product.photo.url} alt="" fill unoptimized sizes="56px" className="object-cover transition duration-300 group-hover:scale-105" /> : <span className="grid h-full place-items-center text-[8px] text-[#9a778f]">No image</span>}{product.stock === 0 && <span className="absolute inset-0 grid place-items-center bg-white/75 text-center text-[8px] font-bold leading-3 text-[#b42323]">SOLD<br />OUT</span>}</div>
+                          <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-[#302531] group-hover:text-[#684768]">{product.name}</span><span className="mt-1 block truncate text-[9px] capitalize text-[#817681]">{product.productType} · {product.category}</span><span className="mt-1 block text-[10px] font-semibold text-[#684768]">{formatPrice(product.price)}{product.stock === 0 && <span className="ml-2 text-[#b42323]">Available soon</span>}</span></span>
+                          {product.stock > 0 && <FiArrowRight size={14} className="mr-1 shrink-0 text-[#a99ba7] transition group-hover:translate-x-0.5 group-hover:text-[#684768]" />}
+                        </>;
+                        const className = `group flex min-w-0 items-center gap-3 rounded-xl border border-[#eee7e1] bg-white p-2 ${product.stock > 0 ? "transition hover:border-[#cbb8c8] hover:bg-[#fffdfa] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-[#986d8f]" : "cursor-sold-out"}`;
+                        return product.stock > 0
+                          ? <Link key={product._id} href={`/products/${encodeURIComponent(product._id)}`} onClick={closeSearch} className={className}>{card}</Link>
+                          : <div key={product._id} className={className}>{card}</div>;
+                      })}
                     </div>
                     {hasMore && <button type="button" disabled={isLoading} onClick={() => setOffset((current) => current + pageSize)} className="mx-auto mt-4 flex min-h-9 items-center gap-2 rounded-lg border border-[#dfd3dd] px-4 text-[10px] font-semibold text-[#684768] transition hover:bg-[#f6eef4] disabled:opacity-60">{isLoading ? <FiLoader size={13} className="animate-spin" /> : null}Show more results</button>}
                   </> : isLoading ? <div className="flex items-center justify-center gap-2 py-10 text-xs text-[#817681]"><FiLoader className="animate-spin" /> Searching the collection…</div> : <div className="py-9 text-center"><p className="font-serif text-lg">No pieces found</p><p className="mt-1 text-[11px] text-[#817681]">Try another name, collection, or price range.</p><button type="button" onClick={() => { setQuery(""); setProductType("all"); setMaxPrice(null); resetResults(); }} className="mt-3 text-[10px] font-semibold text-[#684768] underline underline-offset-4">Clear filters</button></div>}

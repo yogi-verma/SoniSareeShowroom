@@ -17,19 +17,25 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const token = await adminToken();
   if (!token) return NextResponse.json({ message: "Admin authentication is required." }, { status: 401 });
 
-  let formData: FormData;
+  let body: BodyInit;
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
   try {
-    formData = await request.formData();
+    if (request.headers.get("content-type")?.includes("application/json")) {
+      body = JSON.stringify(await request.json());
+      headers["Content-Type"] = "application/json";
+    } else {
+      body = await request.formData();
+    }
   } catch {
-    return NextResponse.json({ message: "A valid multipart form body is required." }, { status: 400 });
+    return NextResponse.json({ message: "A valid product update body is required." }, { status: 400 });
   }
 
   const { productId } = await params;
   try {
     const backendResponse = await fetch(`${ADMIN_API_URL}/api/products/${encodeURIComponent(productId)}`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
+      headers,
+      body,
       cache: "no-store",
     });
     const responseBody = await backendResponse.json().catch(() => ({}));

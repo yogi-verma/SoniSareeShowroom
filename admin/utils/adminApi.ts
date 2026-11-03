@@ -299,6 +299,13 @@ export function updateProduct(productId: string, product: ProductUpdateInput) {
   });
 }
 
+export function updateProductStock(productId: string, stock: number) {
+  return sendAdminRequest<{ message: string; product: Product }>(`/api/admin/products/${encodeURIComponent(productId)}`, {
+    method: "PATCH",
+    body: { stock },
+  });
+}
+
 export function deleteProduct(productId: string) {
   return sendAdminRequest<{ message: string }>(`/api/admin/products/${encodeURIComponent(productId)}`, { method: "DELETE" });
 }
