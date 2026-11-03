@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { FiArrowRight, FiEye, FiEyeOff, FiLoader, FiX } from "react-icons/fi";
+import { FiArrowRight, FiEye, FiEyeOff, FiX } from "react-icons/fi";
+import { Spinner } from "../../app/components/ui/Spinner";
 import { loginAdmin } from "../utils/adminApi";
 import { useAccessibleDialog } from "./adminComponents/useAccessibleDialog";
 
@@ -175,7 +176,7 @@ export default function AdminLoginModal({ open, onClose }: AdminLoginModalProps)
             >
               {isBusy ? (
                 <>
-                  <FiLoader size={16} className="animate-spin" aria-hidden="true" />
+                  <Spinner size={16} />
                   {isRedirecting ? "Opening your dashboard…" : "Verifying access…"}
                 </>
               ) : (

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { FiAlertCircle, FiCheckCircle, FiLoader } from "react-icons/fi";
+import { FiAlertCircle, FiCheckCircle } from "react-icons/fi";
+import { Spinner } from "../../../../app/components/ui/Spinner";
 import type { Purchase } from "../../../utils/adminApi";
 
 function formatPrice(amount: number) {
@@ -80,7 +81,7 @@ export default function PendingSupplierPayments({ purchases, isLoading, hasError
 
       {isLoading ? (
         <div role="status" aria-label="Loading outstanding supplier payments" className="flex min-h-20 items-center justify-center text-amber-800">
-          <FiLoader size={19} className="animate-spin" /><span className="sr-only">Loading outstanding supplier payments</span>
+          <Spinner size={19} label="Loading outstanding supplier payments" />
         </div>
       ) : hasError ? (
         <p role="status" className="px-4 py-6 text-center text-xs text-[#80683f]">Could not load outstanding balances. Refresh purchase data to try again.</p>

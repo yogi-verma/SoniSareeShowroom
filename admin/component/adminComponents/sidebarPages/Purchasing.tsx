@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { FiArrowLeft, FiCalendar, FiCheck, FiChevronDown, FiDownload, FiLoader, FiMapPin, FiPlus, FiRefreshCw, FiShoppingBag, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCheck, FiChevronDown, FiDownload, FiMapPin, FiPlus, FiRefreshCw, FiShoppingBag, FiTrash2, FiX } from "react-icons/fi";
 import { addPurchasePayment, createPurchase, getPurchases } from "../../../utils/adminApi";
+import { Spinner } from "../../../../app/components/ui/Spinner";
 import type { Purchase, PurchaseInput, PurchasePaymentMethod } from "../../../utils/adminApi";
 import { useAccessibleDialog } from "../useAccessibleDialog";
 import PendingSupplierPayments from "./PendingSupplierPayments";
@@ -459,7 +460,7 @@ export default function Purchasing() {
             disabled={isLoading}
             className="inline-flex w-fit items-center gap-2 rounded-lg border border-[#e6dfd8] px-3 py-2 text-[11px] font-medium text-[#514952] transition hover:bg-[#faf8f5] disabled:opacity-50 sm:text-xs"
           >
-            <FiRefreshCw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
+            {isLoading ? <Spinner size={14} /> : <FiRefreshCw size={14} />} Refresh
           </button>
         </div>
 
@@ -607,7 +608,7 @@ export default function Purchasing() {
               <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
                 <button type="button" onClick={closePaymentModal} disabled={isSavingPayment} className="admin-button-secondary">Cancel</button>
                 <button type="submit" disabled={isSavingPayment || paymentAmountValue < 1 || paymentAmountValue > currentPaymentRemaining} className="admin-button-primary">
-                  {isSavingPayment && <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
+                  {isSavingPayment && <Spinner size={16} />}
                   {isSavingPayment ? "Saving payment…" : "Submit payment"}
                 </button>
               </div>
@@ -785,7 +786,7 @@ export default function Purchasing() {
               <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
                 <button type="button" onClick={closeModal} disabled={isSaving} className="admin-button-secondary">Cancel</button>
                 <button type="submit" disabled={isSaving} className="admin-button-primary">
-                  {isSaving && <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
+                  {isSaving && <Spinner size={16} />}
                   {isSaving ? "Saving purchase…" : "Save purchase"}
                 </button>
               </div>
@@ -818,8 +819,7 @@ function PaymentStatusBadge({ purchase }: { purchase: Purchase }) {
 function LoadingSpinner({ label }: { label: string }) {
   return (
     <div role="status" aria-label={label} className="flex min-h-14 items-center justify-center text-plum">
-      <FiLoader size={20} className="animate-spin" aria-hidden="true" />
-      <span className="sr-only">{label}</span>
+      <Spinner size={20} label={label} />
     </div>
   );
 }

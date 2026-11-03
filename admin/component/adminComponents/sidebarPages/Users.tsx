@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiAward, FiMail, FiPhone, FiRefreshCw, FiSearch, FiUsers } from "react-icons/fi";
+import { Spinner } from "../../../../app/components/ui/Spinner";
 import { getAdminUsers } from "../../../utils/adminApi";
 import type { AdminUser, AdminUsersResponse } from "../../../utils/adminApi";
 
@@ -49,7 +50,7 @@ export default function Users() {
           <h1 id="admin-users-title" className="admin-page-title">Users</h1>
           <p className="admin-page-description">Customer accounts and their paid order history.</p>
         </div>
-        <button type="button" onClick={() => void loadUsers()} disabled={isLoading} className="admin-button-secondary"><FiRefreshCw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh</button>
+        <button type="button" onClick={() => void loadUsers()} disabled={isLoading} className="admin-button-secondary">{isLoading ? <Spinner size={14} /> : <FiRefreshCw size={14} />} Refresh</button>
       </div>
 
       {loadError && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#efd5d3] bg-[#fff7f6] px-4 py-3 text-xs text-[#9b3935]"><span>{loadError}</span><button type="button" onClick={() => void loadUsers()} className="font-semibold underline underline-offset-2">Try again</button></div>}

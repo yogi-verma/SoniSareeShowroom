@@ -6,10 +6,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   FiChevronLeft,
   FiChevronRight,
-  FiRefreshCw,
-  FiShoppingBag,
-  FiZap,
-  FiLoader,
   FiStar,
   FiX,
 } from "react-icons/fi";
@@ -19,6 +15,9 @@ import { useAuth } from "../../components/Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
 import { openProductCheckout } from "../../lib/paymentApi";
 import { useStockRefresh } from "../../lib/useStockRefresh";
+import ProductCard from "../../components/ProductCard";
+import { PurchaseButtons } from "../../components/ui/PurchaseButtons";
+import { Spinner } from "../../components/ui/Spinner";
 import {
   getProductReviews,
   saveProductReview,
@@ -293,12 +292,9 @@ export default function ProductDetail({ productId }: { productId: string }) {
   }
 
   async function handleRelatedAction(
-    event: React.MouseEvent<HTMLButtonElement>,
     item: Product,
     action: "cart" | "buy",
   ) {
-    event.preventDefault();
-    event.stopPropagation();
     if (!user) {
       openSignIn();
       return;
@@ -558,45 +554,15 @@ export default function ProductDetail({ productId }: { productId: string }) {
                 </dl>
               </div>
 
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  disabled={product.stock < 1 || pendingAction !== null}
-                  onClick={() => void handleCartAction("cart")}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-[#cbb8c8] bg-white px-4 text-[10px] font-semibold tracking-wide text-[#30172f] transition hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {pendingAction === "cart" ? (
-                    <>
-                      <FiRefreshCw className="animate-spin" size={15} /> Adding…
-                    </>
-                  ) : (
-                    <>
-                      <FiShoppingBag size={16} /> Add to cart
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  disabled={product.stock < 1 || pendingAction !== null}
-                  onClick={() => void handleCartAction("buy")}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-4 text-[10px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {pendingAction === "buy" ? (
-                    <>
-                      <FiLoader
-                        size={13}
-                        className="animate-spin"
-                        aria-hidden="true"
-                      />{" "}
-                      Redirecting…
-                    </>
-                  ) : (
-                    <>
-                      <FiZap size={15} /> Buy now
-                    </>
-                  )}
-                </button>
-              </div>
+              <PurchaseButtons
+                size="detail"
+                disabled={product.stock < 1}
+                actionsDisabled={pendingAction !== null}
+                adding={pendingAction === "cart"}
+                buying={pendingAction === "buy"}
+                onAddToCart={() => void handleCartAction("cart")}
+                onBuy={() => void handleCartAction("buy")}
+              />
               {notice && (
                 <p aria-live="polite" className="mt-3 text-xs text-[#684768]">
                   {notice}
@@ -646,92 +612,18 @@ export default function ProductDetail({ productId }: { productId: string }) {
               ) : relatedProducts.length ? (
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
                   {relatedProducts.map((item) => (
-                    <article
+                    <ProductCard
                       key={item._id}
-                      className={`group relative overflow-hidden rounded-lg border border-[#eadfd8] bg-[#fffdfa] transition ${item.stock > 0 ? "hover:-translate-y-0.5 hover:shadow-md" : "cursor-sold-out"}`}
-                    >
-                      <Link href={`/products/${item._id}`} onClick={(event) => { if (item.stock === 0) event.preventDefault(); }} aria-disabled={item.stock === 0} tabIndex={item.stock === 0 ? -1 : undefined} className="block">
-                        <div className="relative aspect-[4/3.6] bg-[#f1eae4]">
-                          {item.photo?.url ? (
-                            <Image
-                              src={item.photo.url}
-                              alt={item.name}
-                              fill
-                              unoptimized
-                              sizes="(max-width: 640px) 50vw, 25vw"
-                              className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                            />
-                          ) : (
-                            <div className="grid h-full place-items-center text-xs text-[#817681]">
-                              Photo unavailable
-                            </div>
-                          )}
-                          <span className="absolute left-1.5 top-1.5 max-w-[calc(100%-12px)] truncate rounded-full bg-[#fffdfa]/90 px-1.5 py-0.5 text-[7px] font-semibold uppercase tracking-wide text-[#684768]">
-                            {item.category}
-                          </span>
-                        </div>
-                        <div className="p-2">
-                          <h3 className="line-clamp-2 min-h-5 text-[10px] font-medium leading-4 text-[#463847] group-hover:text-[#684768]">
-                            {item.name}
-                          </h3>
-                          <p className="mt-0.5 text-xs font-semibold text-[#30172f]">
-                            {formatPrice(item.price)}
-                          </p>
-                        </div>
-                      </Link>
-                      <div className="px-2 pb-2">
-                        <div className="grid grid-cols-2 gap-1.5">
-                          <button
-                            type="button"
-                            disabled={
-                              item.stock < 1 ||
-                              relatedPendingAction !== null ||
-                              pendingAction !== null
-                            }
-                            onClick={(event) =>
-                              void handleRelatedAction(event, item, "cart")
-                            }
-                            className="inline-flex min-h-8 items-center justify-center gap-1 rounded-md border border-[#cbb8c8] bg-white px-1.5 text-[8px] font-semibold text-[#30172f] transition hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50"
-                            aria-label={`Add ${item.name} to cart`}
-                          >
-                            {relatedPendingAction?.productId === item._id &&
-                            relatedPendingAction.action === "cart" ? (
-                              <FiRefreshCw size={11} className="animate-spin" />
-                            ) : (
-                              <FiShoppingBag size={11} />
-                            )}
-                            Add to cart
-                          </button>
-                          <button
-                            type="button"
-                            disabled={
-                              item.stock < 1 ||
-                              relatedPendingAction !== null ||
-                              pendingAction !== null
-                            }
-                            onClick={(event) =>
-                              void handleRelatedAction(event, item, "buy")
-                            }
-                            className="inline-flex min-h-8 items-center justify-center gap-1 rounded-md bg-[#30172f] px-1.5 text-[8px] font-semibold text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-50"
-                            aria-label={`Buy ${item.name} now`}
-                          >
-                            {relatedPendingAction?.productId === item._id &&
-                            relatedPendingAction.action === "buy" ? (
-                              <FiLoader size={10} className="animate-spin" />
-                            ) : (
-                              <FiZap size={10} />
-                            )}
-                            Buy now
-                          </button>
-                        </div>
-                        {item.stock < 1 && (
-                          <p className="mt-1 text-center text-[8px] text-[#a13d39]">
-                            Out of stock
-                          </p>
-                        )}
-                      </div>
-                      {item.stock === 0 && <div className="absolute inset-0 z-20 grid cursor-sold-out place-content-center gap-1 bg-white/75 text-center"><span className="text-xs font-bold tracking-[0.16em] text-[#b42323]">SOLD OUT</span><span className="text-[10px] font-semibold text-[#b42323]">Available soon</span></div>}
-                    </article>
+                      product={item}
+                      variant="related"
+                      onAddToCart={() => void handleRelatedAction(item, "cart")}
+                      onBuy={() => void handleRelatedAction(item, "buy")}
+                      actionsDisabled={relatedPendingAction !== null || pendingAction !== null}
+                      adding={relatedPendingAction?.productId === item._id && relatedPendingAction.action === "cart"}
+                      buying={relatedPendingAction?.productId === item._id && relatedPendingAction.action === "buy"}
+                      addLabel="Add to cart"
+                      buyLabel="Buy now"
+                    />
                   ))}
                 </div>
               ) : (
@@ -942,9 +834,7 @@ export default function ProductDetail({ productId }: { productId: string }) {
                       onClick={() => void handleLoadMoreReviews()}
                       className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#cbb8c8] px-4 text-xs font-semibold text-[#684768] transition hover:bg-[#f8f3f6] disabled:opacity-60"
                     >
-                      {loadingMoreReviews && (
-                        <FiRefreshCw className="animate-spin" size={13} />
-                      )}
+                      {loadingMoreReviews && <Spinner size={13} />}
                       Load more reviews
                     </button>
                   )}
@@ -1054,9 +944,7 @@ export default function ProductDetail({ productId }: { productId: string }) {
                 disabled={reviewSubmitting || !reviewComment.trim()}
                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#30172f] px-4 text-xs font-semibold text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-55"
               >
-                {reviewSubmitting && (
-                  <FiRefreshCw className="animate-spin" size={14} />
-                )}{" "}
+                {reviewSubmitting && <Spinner size={14} />}{" "}
                 {reviewSubmitting ? "Saving…" : "Submit review"}
               </button>
               <p className="text-center text-[10px] text-[#897d87]">

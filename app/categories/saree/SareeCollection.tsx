@@ -1,13 +1,14 @@
 "use client";
 
 import Image, { type StaticImageData } from "next/image";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
+import { FiRefreshCw, FiShoppingBag } from "react-icons/fi";
 import { useAuth } from "../../components/Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
 import { openProductCheckout } from "../../lib/paymentApi";
 import { useStockRefresh } from "../../lib/useStockRefresh";
+import ProductCard from "../../components/ProductCard";
+import { Spinner } from "../../components/ui/Spinner";
 
 type SareeProduct = {
   _id: string;
@@ -26,14 +27,6 @@ type Props = {
   category?: string;
   heroImage: StaticImageData;
 };
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
 
 export default function SareeCollection({ title, editTitle, description, category, heroImage }: Props) {
   const { user, openSignIn } = useAuth();
@@ -147,7 +140,7 @@ export default function SareeCollection({ title, editTitle, description, categor
             {!isLoading && !error && <p className="mt-1 text-xs text-[#777078]">{products.length} {products.length === 1 ? "design" : "designs"} available</p>}
           </div>
           <button type="button" onClick={() => void loadProducts()} disabled={isLoading} aria-label="Refresh saree collection" className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[#d8cbd5] bg-white px-3 text-[10px] font-medium text-[#513c50] transition hover:bg-[#f6eef4] disabled:opacity-60">
-            {isLoading ? <FiLoader size={14} className="animate-spin" /> : <FiRefreshCw size={14} />} Refresh
+            {isLoading ? <Spinner size={14} /> : <FiRefreshCw size={14} />} Refresh
           </button>
         </div>
 
@@ -168,28 +161,17 @@ export default function SareeCollection({ title, editTitle, description, categor
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-            {products.map((product, index) => (
-              <article key={product._id} className={`group flex flex-col overflow-hidden border border-[#e9e0d9] bg-white shadow-[0_4px_18px_rgba(43,27,38,0.045)] transition duration-300 ${product.stock > 0 ? "hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(43,27,38,0.12)]" : "cursor-sold-out"}`}>
-                <div className="relative aspect-[4/4.8] overflow-hidden bg-[#eee6e0]">
-              {product.stock > 0 && <Link href={`/products/${encodeURIComponent(product._id)}`} aria-label={`View ${product.name}`} className="absolute inset-0 z-[1]"><span className="sr-only">View {product.name}</span></Link>}
-                <Image src={product.photo.url} alt={product.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw" unoptimized className="object-cover transition-transform duration-700 group-hover:scale-[1.045]" />
-                  <span className="absolute left-2.5 top-2.5 rounded-full bg-[#fffaf4]/95 px-2 py-1.5 text-[7px] font-semibold tracking-[0.12em] text-[#684768] shadow-sm sm:left-3 sm:top-3 sm:px-2.5 sm:text-[8px]">{product.category}</span>
-                  <span className="absolute bottom-2.5 right-2.5 rounded-full bg-[#211821]/75 px-2.5 py-1 text-[8px] text-white backdrop-blur-sm">{String(index + 1).padStart(2, "0")} / {String(products.length).padStart(2, "0")}</span>
-                  {product.stock === 0 && <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-white/90 py-2 text-center text-xs font-bold tracking-[0.16em] text-[#b42323] shadow-sm">SOLD OUT</span>}
-                </div>
-                <div className="flex flex-1 flex-col p-3 sm:p-4">
-                  <h3 className="min-h-7 font-serif text-[13px] leading-snug text-[#302531] sm:text-[15px]">{product.stock > 0 ? <Link href={`/products/${encodeURIComponent(product._id)}`} className="rounded-sm hover:text-[#684768] focus-visible:outline-2 focus-visible:outline-[#986d8f]">{product.name}</Link> : product.name}</h3>
-                  <div className="flex items-center justify-between gap-2">
-                    <strong className="text-[12px] font-semibold text-[#251c25] sm:text-[14px]">{formatPrice(product.price)}</strong>
-                    <span className={`text-[8px] font-semibold sm:text-[9px] ${product.stock > 0 ? "text-[#54745f]" : "text-[#b42323]"}`}>{product.stock > 0 ? `${product.stock} in stock` : "Available soon"}</span>
-                  </div>
-                  <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3 sm:gap-2 sm:pt-4">
-                    <button type="button" disabled={!product.stock || checkoutProductId === product._id} onClick={() => void requestShoppingAction(product)} className="min-h-9 rounded-sm bg-[#30172f] px-1.5 text-[8px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:bg-[#a99ca8] sm:min-h-10 sm:px-2 sm:text-[10px]">{checkoutProductId === product._id ? <span className="inline-flex items-center justify-center gap-1"><FiLoader size={12} className="animate-spin" aria-hidden="true" /> Redirecting…</span> : "Buy now"}</button>
-                    <button type="button" disabled={!product.stock || addingProductId === product._id} onClick={() => void addProductToBag(product)} className="min-h-9 rounded-sm border border-[#cbb8c8] px-1.5 text-[8px] font-semibold tracking-wide text-[#30172f] transition hover:border-[#30172f] hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10 sm:px-2 sm:text-[10px]">{addingProductId === product._id ? "Adding…" : "Add to bag"}</button>
-                  </div>
-                </div>
-              </article>
-            ))}
+            {products.map((product, index) => <ProductCard
+              key={product._id}
+              product={product}
+              index={index}
+              total={products.length}
+              onBuy={() => void requestShoppingAction(product)}
+              onAddToCart={() => void addProductToBag(product)}
+              buying={checkoutProductId === product._id}
+              adding={addingProductId === product._id}
+              addLabel="Add to bag"
+            />)}
           </div>
         )}
       </section>

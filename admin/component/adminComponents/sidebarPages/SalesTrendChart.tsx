@@ -2,7 +2,8 @@
 
 import { useId, useMemo, useState } from "react";
 import type { PointerEvent } from "react";
-import { FiCalendar, FiLoader, FiTrendingUp } from "react-icons/fi";
+import { FiCalendar, FiTrendingUp } from "react-icons/fi";
+import { Spinner } from "../../../../app/components/ui/Spinner";
 import type { SalesTransaction } from "../../../utils/adminApi";
 
 type Range = "week" | "month" | "threeMonths" | "sixMonths" | "year" | "custom";
@@ -215,7 +216,7 @@ export default function SalesTrendChart({ transactions, isLoading }: {
       <div className="px-2 py-4 sm:px-5 sm:py-6">
         {isLoading ? (
           <div role="status" aria-label="Loading sales chart" className="flex h-[280px] items-center justify-center text-plum">
-            <FiLoader size={24} className="animate-spin" />
+            <Spinner size={24} />
             <span className="sr-only">Loading sales chart</span>
           </div>
         ) : customRangeInvalid ? (
@@ -314,7 +315,7 @@ function Stat({ label, value, icon, detail }: {
       <span className="min-w-0">
         <span className="block text-[10px] text-[#928a92]">{label}</span>
         <span className="mt-0.5 flex items-center gap-2 truncate text-sm font-semibold text-[#332a35]">
-          {value === null ? <FiLoader aria-label={`Loading ${label}`} size={14} className="animate-spin text-plum" /> : formatPrice(value)}
+          {value === null ? <Spinner label={`Loading ${label}`} size={14} className="text-plum" /> : formatPrice(value)}
           {detail && value !== null && <span className="truncate text-[10px] font-normal text-[#928a92]">{detail}</span>}
         </span>
       </span>

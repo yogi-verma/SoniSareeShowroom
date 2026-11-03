@@ -6,7 +6,6 @@ import {
   FiActivity,
   FiCalendar,
   FiDollarSign,
-  FiLoader,
   FiPlus,
   FiRefreshCw,
   FiShoppingBag,
@@ -14,6 +13,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { createDailySales, getSalesTransactions } from "../../../utils/adminApi";
+import { Spinner } from "../../../../app/components/ui/Spinner";
 import type { SalesTransaction } from "../../../utils/adminApi";
 import { useAccessibleDialog } from "../useAccessibleDialog";
 import SalesTrendChart from "./SalesTrendChart";
@@ -240,7 +240,7 @@ export default function Sales() {
             aria-label="Refresh sales"
             className="admin-icon-button border-[var(--admin-border-strong)] disabled:opacity-50"
           >
-            <FiRefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+            {isLoading ? <Spinner size={14} /> : <FiRefreshCw size={14} />}
           </button>
         </div>
 
@@ -341,7 +341,7 @@ export default function Sales() {
               <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end sm:gap-3">
                 <button type="button" onClick={closeModal} disabled={isSaving} className="admin-button-secondary">Cancel</button>
                 <button type="submit" disabled={isSaving} className="admin-button-primary">
-                  {isSaving && <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
+                  {isSaving && <Spinner size={16} />}
                   {isSaving ? "Saving daily sales…" : "Save daily sales"}
                 </button>
               </div>
@@ -367,7 +367,7 @@ function SummaryCard({ label, amount, icon: Icon, accent, loading = false }: {
         <p className="text-[10px] font-medium leading-4 text-[#817982] sm:text-xs">{label}</p>
         <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${colors[accent]} sm:h-8 sm:w-8`}><Icon size={14} aria-hidden="true" /></span>
       </div>
-      <p className="mt-2 flex h-6 items-center text-[15px] font-semibold tracking-tight text-[#332a35] sm:text-lg">{loading ? <FiLoader role="status" aria-label={`Loading ${label}`} className="animate-spin text-plum" size={18} /> : formatPrice(amount)}</p>
+      <p className="mt-2 flex h-6 items-center text-[15px] font-semibold tracking-tight text-[#332a35] sm:text-lg">{loading ? <Spinner label={`Loading ${label}`} className="text-plum" size={18} /> : formatPrice(amount)}</p>
     </article>
   );
 }
@@ -413,7 +413,7 @@ function SelectedDayCard({ label, amount, hasValue, icon: Icon, expense = false,
   return (
     <article className="admin-panel min-w-0 bg-[#fffdfa] p-3 sm:p-4">
       <div className="flex items-center gap-1.5 text-[10px] text-[#817982] sm:text-xs"><Icon size={13} aria-hidden="true" />{label}</div>
-      <p className={`mt-2 flex h-5 items-center text-sm font-semibold sm:text-base ${expense ? "text-[#a54a4a]" : "text-[#332a35]"}`}>{loading ? <FiLoader aria-label="Loading" className="animate-spin text-plum" size={16} /> : hasValue ? formatPrice(amount) : "—"}</p>
+      <p className={`mt-2 flex h-5 items-center text-sm font-semibold sm:text-base ${expense ? "text-[#a54a4a]" : "text-[#332a35]"}`}>{loading ? <Spinner label="Loading" className="text-plum" size={16} /> : hasValue ? formatPrice(amount) : "—"}</p>
     </article>
   );
 }
@@ -436,8 +436,7 @@ function AmountBadge({ amount, visible, kind }: {
 function LoadingSpinner({ label }: { label: string }) {
   return (
     <div role="status" aria-label={label} className="flex min-h-12 items-center justify-center text-plum">
-      <FiLoader size={20} className="animate-spin" aria-hidden="true" />
-      <span className="sr-only">{label}</span>
+      <Spinner size={20} label={label} />
     </div>
   );
 }

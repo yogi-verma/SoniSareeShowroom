@@ -1,19 +1,11 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { FiArrowRight, FiCheck, FiChevronDown, FiLoader, FiSearch, FiX } from "react-icons/fi";
+import { FiCheck, FiChevronDown, FiSearch, FiX } from "react-icons/fi";
+import ProductCard, { type StoreProduct } from "../ProductCard";
+import { Spinner } from "../ui/Spinner";
 
-type Product = {
-  _id: string;
-  productType: string;
-  category: string;
-  name: string;
-  price: number;
-  stock: number;
-  photo?: { url?: string };
-};
+type Product = StoreProduct;
 
 const productTypes = [
   { value: "all", label: "All pieces" },
@@ -30,14 +22,6 @@ const priceOptions = [
 ];
 
 const pageSize = 12;
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
 
 export default function SearchBar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -173,24 +157,14 @@ export default function SearchBar() {
           <div className="p-4 sm:p-5">
             {!hasCriteria ? <div className="py-7 text-center"><p className="font-serif text-lg">Find your next favourite</p><p className="mt-1 text-[11px] text-[#817681]">Search by product name, choose a collection, or filter by price.</p><div className="mt-4 flex flex-wrap justify-center gap-2">{["Banarasi", "Silk", "Bandhani"].map((suggestion) => <button key={suggestion} type="button" onClick={() => { setQuery(suggestion); resetResults(); }} className="rounded-full border border-[#eee7e1] bg-white px-3 py-1.5 text-[10px] text-[#684768] transition hover:bg-[#f6eef4]">{suggestion}</button>)}</div></div>
               : error ? <p role="alert" className="rounded-lg bg-[#fff6f5] px-3 py-3 text-xs text-[#9b3935]">{error}</p>
-                : isLoading && offset === 0 && !products.length ? <div className="flex items-center justify-center gap-2 py-10 text-xs text-[#817681]"><FiLoader className="animate-spin" /> Searching the collection…</div>
+                : isLoading && offset === 0 && !products.length ? <div className="flex items-center justify-center gap-2 py-10 text-xs text-[#817681]"><Spinner label="Searching the collection…" /></div>
                   : products.length ? <>
                     <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-[#958a93]">Matching pieces</p>
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {products.map((product) => {
-                        const card = <>
-                          <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f0e9e4]">{product.photo?.url ? <Image src={product.photo.url} alt="" fill unoptimized sizes="56px" className="object-cover transition duration-300 group-hover:scale-105" /> : <span className="grid h-full place-items-center text-[8px] text-[#9a778f]">No image</span>}{product.stock === 0 && <span className="absolute inset-0 grid place-items-center bg-white/75 text-center text-[8px] font-bold leading-3 text-[#b42323]">SOLD<br />OUT</span>}</div>
-                          <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold text-[#302531] group-hover:text-[#684768]">{product.name}</span><span className="mt-1 block truncate text-[9px] capitalize text-[#817681]">{product.productType} · {product.category}</span><span className="mt-1 block text-[10px] font-semibold text-[#684768]">{formatPrice(product.price)}{product.stock === 0 && <span className="ml-2 text-[#b42323]">Available soon</span>}</span></span>
-                          {product.stock > 0 && <FiArrowRight size={14} className="mr-1 shrink-0 text-[#a99ba7] transition group-hover:translate-x-0.5 group-hover:text-[#684768]" />}
-                        </>;
-                        const className = `group flex min-w-0 items-center gap-3 rounded-xl border border-[#eee7e1] bg-white p-2 ${product.stock > 0 ? "transition hover:border-[#cbb8c8] hover:bg-[#fffdfa] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-[#986d8f]" : "cursor-sold-out"}`;
-                        return product.stock > 0
-                          ? <Link key={product._id} href={`/products/${encodeURIComponent(product._id)}`} onClick={closeSearch} className={className}>{card}</Link>
-                          : <div key={product._id} className={className}>{card}</div>;
-                      })}
+                      {products.map((product) => <ProductCard key={product._id} product={product} variant="search" onNavigate={closeSearch} />)}
                     </div>
-                    {hasMore && <button type="button" disabled={isLoading} onClick={() => setOffset((current) => current + pageSize)} className="mx-auto mt-4 flex min-h-9 items-center gap-2 rounded-lg border border-[#dfd3dd] px-4 text-[10px] font-semibold text-[#684768] transition hover:bg-[#f6eef4] disabled:opacity-60">{isLoading ? <FiLoader size={13} className="animate-spin" /> : null}Show more results</button>}
-                  </> : isLoading ? <div className="flex items-center justify-center gap-2 py-10 text-xs text-[#817681]"><FiLoader className="animate-spin" /> Searching the collection…</div> : <div className="py-9 text-center"><p className="font-serif text-lg">No pieces found</p><p className="mt-1 text-[11px] text-[#817681]">Try another name, collection, or price range.</p><button type="button" onClick={() => { setQuery(""); setProductType("all"); setMaxPrice(null); resetResults(); }} className="mt-3 text-[10px] font-semibold text-[#684768] underline underline-offset-4">Clear filters</button></div>}
+                    {hasMore && <button type="button" disabled={isLoading} onClick={() => setOffset((current) => current + pageSize)} className="mx-auto mt-4 flex min-h-9 items-center gap-2 rounded-lg border border-[#dfd3dd] px-4 text-[10px] font-semibold text-[#684768] transition hover:bg-[#f6eef4] disabled:opacity-60">{isLoading ? <Spinner size={13} /> : null}Show more results</button>}
+                  </> : isLoading ? <div className="flex items-center justify-center gap-2 py-10 text-xs text-[#817681]"><Spinner label="Searching the collection…" /></div> : <div className="py-9 text-center"><p className="font-serif text-lg">No pieces found</p><p className="mt-1 text-[11px] text-[#817681]">Try another name, collection, or price range.</p><button type="button" onClick={() => { setQuery(""); setProductType("all"); setMaxPrice(null); resetResults(); }} className="mt-3 text-[10px] font-semibold text-[#684768] underline underline-offset-4">Clear filters</button></div>}
           </div>
           <div className="border-t border-[#eee7e1] px-4 py-2.5 text-center text-[9px] text-[#a0949d]">Search by name · filter by collection and price</div>
         </section>

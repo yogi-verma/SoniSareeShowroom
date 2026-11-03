@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiActivity, FiArrowRight, FiAward, FiBell, FiDollarSign, FiLoader, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
+import { FiActivity, FiArrowRight, FiAward, FiBell, FiDollarSign, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
+import { Spinner } from "../../../../app/components/ui/Spinner";
 import { getAdminOrders, getPurchases, getSalesTransactions } from "../../../utils/adminApi";
 import type { Purchase, SalesTransaction } from "../../../utils/adminApi";
 import PendingSupplierPayments from "./PendingSupplierPayments";
@@ -135,7 +136,7 @@ export default function Overview({ adminName, onViewOrders }: { adminName: strin
             </span>
             <FiArrowRight size={16} className="shrink-0 text-[#8b642f]" aria-hidden="true" />
           </button>
-          {orderCountError && <button type="button" onClick={() => void loadPendingOrderCount()} disabled={isOrderCountLoading} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-[10px] font-semibold text-[#8b642f] hover:bg-[#fff5e4] disabled:opacity-50">Retry <FiRefreshCw size={12} className={isOrderCountLoading ? "animate-spin" : ""} /></button>}
+          {orderCountError && <button type="button" onClick={() => void loadPendingOrderCount()} disabled={isOrderCountLoading} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-[10px] font-semibold text-[#8b642f] hover:bg-[#fff5e4] disabled:opacity-50">Retry {isOrderCountLoading ? <Spinner size={12} /> : <FiRefreshCw size={12} />}</button>}
         </div>
       )}
 
@@ -175,7 +176,7 @@ export default function Overview({ adminName, onViewOrders }: { adminName: strin
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a07848]">Top wholesale supplier</p>
             {isLoading ? (
-              <FiLoader role="status" aria-label="Loading top supplier" size={18} className="mt-2 animate-spin text-plum" />
+              <Spinner label="Loading top supplier" size={18} className="mt-2 text-plum" />
             ) : loadError ? (
               <p className="mt-1 text-xs text-[#928a92]">Supplier data is unavailable.</p>
             ) : topSupplier ? (
@@ -215,7 +216,7 @@ function OverviewCard({ label, value, icon: Icon, color, isLoading, hasError }: 
         <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${styles[color]}`}><Icon size={15} /></span>
       </div>
       <div className="mt-3 flex h-7 items-center text-lg font-semibold tracking-tight text-[#332a35]">
-        {isLoading ? <FiLoader role="status" aria-label={`Loading ${label}`} size={18} className="animate-spin text-plum" /> : hasError ? "—" : formatPrice(value)}
+        {isLoading ? <Spinner label={`Loading ${label}`} size={18} className="text-plum" /> : hasError ? "—" : formatPrice(value)}
       </div>
     </article>
   );

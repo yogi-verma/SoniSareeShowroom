@@ -10,7 +10,6 @@ import {
   FiImage,
   FiMoreVertical,
   FiEdit2,
-  FiLoader,
   FiMinus,
   FiPackage,
   FiPlus,
@@ -22,6 +21,8 @@ import {
 } from "react-icons/fi";
 import { createProduct, deleteProduct, getProducts, updateProduct, updateProductStock } from "../../../utils/adminApi";
 import { useStockRefresh } from "../../../../app/lib/useStockRefresh";
+import { Spinner } from "../../../../app/components/ui/Spinner";
+import ProductCard from "../../../../app/components/ProductCard";
 import type { Product, ProductCategory, ProductType } from "../../../utils/adminApi";
 import { useAccessibleDialog } from "../useAccessibleDialog";
 
@@ -46,14 +47,6 @@ type ProductForm = {
 
 function emptyForm(): ProductForm {
   return { productType: "", category: "", name: "", price: "", stock: "", photo: null, additionalPhotos: [] };
-}
-
-function formatPrice(amount: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function titleCase(value: string) {
@@ -447,7 +440,7 @@ export default function Inventory() {
       <div className="mb-2 flex items-center justify-between gap-3 px-0.5">
         <p className="text-[11px] text-[var(--admin-muted)]">{isLoading ? "Loading products…" : `${visibleProducts.length} ${visibleProducts.length === 1 ? "product" : "products"}`}</p>
         <button type="button" onClick={() => void loadProducts()} disabled={isLoading} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-[11px] font-medium text-[var(--admin-muted)] transition hover:bg-white hover:text-plum disabled:opacity-50">
-          {isLoading ? <FiLoader size={13} className="animate-spin" /> : <FiRefreshCw size={13} />} Refresh
+          {isLoading ? <Spinner size={13} /> : <FiRefreshCw size={13} />} Refresh
         </button>
       </div>
 
@@ -457,7 +450,7 @@ export default function Inventory() {
             <button type="button" onClick={() => void loadProducts()} className="admin-button-secondary mt-4"><FiRefreshCw size={14} /> Try again</button>
           </div>
         ) : isLoading ? (
-          <div className="grid min-h-48 place-items-center rounded-xl border border-[var(--admin-border)] bg-white p-8 text-sm text-[var(--admin-muted)]"><span className="inline-flex items-center gap-2"><FiLoader className="animate-spin" /> Loading inventory…</span></div>
+          <div className="grid min-h-48 place-items-center rounded-xl border border-[var(--admin-border)] bg-white p-8 text-sm text-[var(--admin-muted)]"><Spinner label="Loading inventory…" /></div>
         ) : visibleProducts.length === 0 ? (
           <div className="admin-panel grid min-h-48 place-items-center p-8 text-center">
             <div><span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#f7f3f6] text-plum"><FiPackage size={21} /></span>
@@ -469,29 +462,16 @@ export default function Inventory() {
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {visibleProducts.map((product) => (
-              <article key={product._id} className="group relative min-w-0 overflow-hidden rounded-lg border border-[var(--admin-border)] bg-white transition hover:-translate-y-0.5 hover:shadow-[var(--admin-shadow-panel)]">
-                <div data-product-menu className="absolute right-2 top-2 z-20">
+              <ProductCard key={product._id} product={product} variant="inventory"
+                headerAction={<div data-product-menu>
                   <button type="button" aria-label={`Actions for ${product.name}`} aria-haspopup="menu" aria-expanded={openProductMenuId === product._id} onClick={() => setOpenProductMenuId((current) => current === product._id ? null : product._id)} className="grid h-6 w-6 place-items-center rounded-full border border-white/80 bg-white/95 text-[#514852] shadow-sm transition hover:bg-white hover:text-plum focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-plum/50"><FiMoreVertical size={17} /></button>
                   {openProductMenuId === product._id && <div role="menu" aria-label={`Actions for ${product.name}`} className="absolute right-0 top-9 w-36 rounded-xl border border-[var(--admin-border)] bg-white p-1.5 shadow-[0_12px_32px_rgba(41,35,43,0.2)]">
                     <button type="button" role="menuitem" onClick={() => openEditModal(product)} className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-medium text-[var(--admin-charcoal)] transition hover:bg-[#f6eef4]"><FiEdit2 size={14} className="text-plum" /> Edit product</button>
                     <button type="button" role="menuitem" onClick={() => { setOpenProductMenuId(null); setProductToDelete(product); setDeleteError(""); }} className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs font-medium text-[#a13d39] transition hover:bg-[#fff1f0]"><FiTrash2 size={14} /> Delete product</button>
                   </div>}
-                </div>
-                <div className="relative aspect-[4/3] overflow-hidden bg-[#f6f2ed]">
-                  <img src={product.photo.url} alt={product.name} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
-                  <span className="absolute left-1.5 top-1.5 rounded-full border border-white/70 bg-white/90 px-2 py-0.5 text-[8px] font-semibold capitalize text-[#514852] shadow-sm sm:left-2 sm:top-2 sm:text-[9px]">{product.productType}</span>
-                  {product.stock === 0 && <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-white/90 py-2 text-center text-xs font-bold tracking-[0.18em] text-[#b42323] shadow-sm">SOLD OUT</span>}
-                </div>
-                <div className="pt-2 sm:pt-2.5 px-2 sm:px-2.5">
-                  <h3 className="line-clamp-2 min-h-6 text-[11px] font-semibold leading-4 text-[var(--admin-charcoal)] sm:text-xs" title={product.name}>{product.name}</h3>
-                  <p className="truncate text-[9px] mb-1 text-[var(--admin-subtle)]">{product.category}</p>
-                  <div className=" flex items-center justify-between gap-1 py-1">
-                    <span className="truncate font-serif text-xs text-plum sm:text-sm">{formatPrice(product.price)}</span>
-                    <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-semibold ${product.stock === 0 ? "bg-[#fff0ef] text-[#a13d39]" : product.stock <= 5 ? "bg-[#fbf3e3] text-[#8a682e]" : "bg-[#edf6f1] text-[#356b57]"}`}>
-                      {`Qty ${product.stock}`}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-[var(--admin-border)] py-1.5" aria-label={`Stock quantity controls for ${product.name}`}>
+                </div>}
+                inventoryFooter={<>
+                  <div className="store-product-card__inventory-controls" aria-label={`Stock quantity controls for ${product.name}`}>
                     <span className="text-[9px] font-medium text-[var(--admin-muted)]">Adjust quantity</span>
                     <div className="flex items-center gap-1.5">
                       <button type="button" onClick={() => void adjustStock(product, -1)} disabled={product.stock === 0 || updatingStockIds.includes(product._id)} aria-label={`Decrease ${product.name} quantity`} className="grid h-7 w-7 place-items-center rounded-md border border-[var(--admin-border-strong)] bg-white text-[var(--admin-charcoal)] hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-45"><FiMinus size={13} /></button>
@@ -499,8 +479,8 @@ export default function Inventory() {
                       <button type="button" onClick={() => void adjustStock(product, 1)} disabled={updatingStockIds.includes(product._id)} aria-label={`Increase ${product.name} quantity`} className="grid h-7 w-7 place-items-center rounded-md border border-[var(--admin-border-strong)] bg-white text-[var(--admin-charcoal)] hover:bg-[#f6eef4] disabled:cursor-wait disabled:opacity-45"><FiPlus size={13} /></button>
                     </div>
                   </div>
-                </div>
-              </article>
+                </>}
+              />
             ))}
           </div>
         )}
@@ -547,7 +527,7 @@ export default function Inventory() {
 
               <div className="flex flex-col-reverse gap-2 border-t border-[var(--admin-border)] pt-4 sm:flex-row sm:justify-end">
                 <button type="button" onClick={closeModal} disabled={isSaving} className="admin-button-secondary sm:min-w-28">Cancel</button>
-                <button type="submit" disabled={isSaving} className="admin-button-primary sm:min-w-36">{isSaving ? <><FiLoader className="animate-spin" size={15} /> Saving product…</> : editingProduct ? <><FiCheck size={15} /> Save changes</> : <><FiPlus size={15} /> Save product</>}</button>
+                <button type="submit" disabled={isSaving} className="admin-button-primary sm:min-w-36">{isSaving ? <><Spinner size={15} /> Saving product…</> : editingProduct ? <><FiCheck size={15} /> Save changes</> : <><FiPlus size={15} /> Save product</>}</button>
               </div>
             </form>
           </section>
@@ -568,7 +548,7 @@ export default function Inventory() {
             {deleteError && <p role="alert" className="mt-4 rounded-lg border border-[#f0d8d6] bg-[#fff6f5] px-3 py-2.5 text-xs leading-5 text-[#a13d39]">{deleteError}</p>}
             <div className="mt-5 flex flex-col-reverse gap-2 border-t border-[var(--admin-border)] pt-4 sm:flex-row sm:justify-end">
               <button type="button" disabled={isDeleting} onClick={closeDeleteConfirmation} className="admin-button-secondary sm:min-w-24">No, keep it</button>
-              <button type="button" disabled={isDeleting} onClick={() => void confirmDeleteProduct()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#a13d39] px-4 text-xs font-semibold text-white transition hover:bg-[#87322f] disabled:cursor-wait disabled:opacity-60 sm:min-w-32">{isDeleting ? <><FiLoader size={14} className="animate-spin" /> Deleting…</> : <><FiTrash2 size={14} /> Yes, delete</>}</button>
+              <button type="button" disabled={isDeleting} onClick={() => void confirmDeleteProduct()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#a13d39] px-4 text-xs font-semibold text-white transition hover:bg-[#87322f] disabled:cursor-wait disabled:opacity-60 sm:min-w-32">{isDeleting ? <><Spinner size={14} /> Deleting…</> : <><FiTrash2 size={14} /> Yes, delete</>}</button>
             </div>
           </section>
         </div>

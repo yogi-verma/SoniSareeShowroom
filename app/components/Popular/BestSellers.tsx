@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { FiArrowLeft, FiArrowRight, FiLoader } from "react-icons/fi";
+import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
 import { useAuth } from "../Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
 import { openProductCheckout } from "../../lib/paymentApi";
 import { useStockRefresh } from "../../lib/useStockRefresh";
+import ProductCard from "../ProductCard";
 
 type Product = {
   _id: string;
@@ -43,14 +42,6 @@ function fetchSarees() {
   );
 
   return request;
-}
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(price);
 }
 
 export default function BestSellers() {
@@ -192,61 +183,19 @@ export default function BestSellers() {
         ) : products.length === 0 ? (
           <p className="py-8 text-sm text-muted">No sarees are available right now.</p>
         ) : products.map((product, index) => (
-          <article
+          <ProductCard
             key={product._id}
-            data-product-card
-            className={`group flex w-[76%] min-w-[230px] shrink-0 snap-start flex-col overflow-hidden rounded-sm border border-[#eadfd8] bg-[#fffdfa] shadow-[0_3px_16px_rgba(43,27,38,0.05)] transition-shadow sm:w-[47%] md:w-[31%] lg:w-[calc((100%-3rem)/4)] xl:w-[calc((100%-4rem)/5)] ${product.stock > 0 ? "hover:shadow-[0_12px_30px_rgba(43,27,38,0.13)]" : "cursor-sold-out"}`}
-          >
-            <div className="relative aspect-[4/4.8] overflow-hidden bg-[#eee6e0]">
-              {product.stock > 0 && <Link href={`/products/${encodeURIComponent(product._id)}`} aria-label={`View ${product.name}`} className="absolute inset-0 z-[1]"><span className="sr-only">View {product.name}</span></Link>}
-                <Image
-                  src={product.photo.url}
-                  alt={product.name}
-                  fill
-                  sizes="(max-width: 640px) 76vw, (max-width: 1024px) 31vw, 20vw"
-                  unoptimized
-                  loading={index < 5 ? "eager" : "lazy"}
-                  className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-                />
-              <span className="absolute left-3 top-3 rounded-sm bg-[#fffaf4]/95 px-2.5 py-1.5 text-[7px] font-semibold tracking-[0.12em] text-[#684768] shadow-sm sm:text-[8px]">
-                {product.category}
-              </span>
-              <span className="absolute bottom-3 right-3 rounded-full bg-[#211821]/75 px-2.5 py-1 text-[8px] text-white backdrop-blur-sm">
-                {String(index + 1).padStart(2, "0")} / {String(products.length).padStart(2, "0")}
-              </span>
-              {product.stock === 0 && <span className="absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 bg-white/90 py-2 text-center text-xs font-bold tracking-[0.16em] text-[#b42323] shadow-sm">SOLD OUT</span>}
-            </div>
-
-            <div className="flex flex-1 flex-col p-3 sm:p-4">
-              <span className={`text-[8px] font-medium uppercase tracking-[0.16em] ${product.stock > 0 ? "text-[#54745f]" : "text-[#a13d39]"}`}>
-                {product.stock > 0 ? `${product.stock} IN STOCK` : "AVAILABLE SOON"}
-              </span>
-              <h3 className="mt-1.5 min-h-7 font-serif text-[14px] leading-snug text-[#302531] sm:text-[15px]">
-                {product.stock > 0 ? <Link href={`/products/${encodeURIComponent(product._id)}`} className="rounded-sm hover:text-[#684768] focus-visible:outline-2 focus-visible:outline-[#986d8f]">{product.name}</Link> : product.name}
-              </h3>
-              <div className="flex items-baseline gap-2">
-                <strong className="text-[13px] font-semibold text-ink">{formatPrice(product.price)}</strong>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  disabled={!product.stock}
-                  onClick={() => void requestShoppingAction(product)}
-                  className="min-h-10 rounded-sm bg-plum px-2 text-[9px] font-semibold tracking-wide text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[10px]"
-                >
-                  {checkoutProductId === product._id ? <span className="inline-flex items-center justify-center gap-1.5"><FiLoader size={13} className="animate-spin" aria-hidden="true" /> Redirecting…</span> : "Buy Now"}
-                </button>
-                <button
-                  type="button"
-                  disabled={!product.stock || addingProductId === product._id}
-                  onClick={() => void handleAddToCart(product)}
-                  className="min-h-10 rounded-sm border border-[#cbb8c8] px-2 text-[9px] font-semibold tracking-wide text-plum transition hover:border-plum hover:bg-[#f6eef4] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[10px]"
-                >
-                  {addingProductId === product._id ? "Adding…" : "Add to Cart"}
-                </button>
-              </div>
-            </div>
-          </article>
+            product={product}
+            variant="featured"
+            index={index}
+            total={products.length}
+            onBuy={() => void requestShoppingAction(product)}
+            onAddToCart={() => void handleAddToCart(product)}
+            buying={checkoutProductId === product._id}
+            adding={addingProductId === product._id}
+            addLabel="Add to Cart"
+            buyLabel="Buy Now"
+          />
         ))}
       </div>
       <div aria-live="polite" className={`fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-[#30172f] px-5 py-3 text-center text-[11px] text-white shadow-xl transition-all ${message ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"}`}>{message}</div>

@@ -24,9 +24,9 @@ import {
   FiTrash2,
   FiUser,
   FiX,
-  FiLoader
 } from "react-icons/fi";
 import Header from "../Header/Header";
+import { Spinner } from "../ui/Spinner";
 import { type AuthUser, useAuth } from "../Auth/AuthProvider";
 import { clearCart as clearCartRequest, getCart, removeCartItem as removeCartItemRequest, updateCartItem as updateCartItemRequest, type Cart, type CartItem } from "../../lib/cartApi";
 import { openCartCheckout } from "../../lib/paymentApi";
@@ -636,7 +636,7 @@ export default function Profile({ email }: { email: string }) {
                     <h2 className="mt-1.5 font-serif text-2xl">Your orders</h2>
                     <p className="mt-1 text-xs text-[#817681]">{orders.length} paid {orders.length === 1 ? "order" : "orders"}</p>
                   </div>
-                  {!selectedOrder && <button type="button" onClick={() => void refreshOrders()} disabled={isOrdersLoading} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d9cbd4] px-3 text-[10px] font-semibold text-[#684768] transition hover:bg-[#f6eef4] disabled:opacity-50"><FiRefreshCw size={13} className={isOrdersLoading ? "animate-spin" : ""} /> Refresh</button>}
+                  {!selectedOrder && <button type="button" onClick={() => void refreshOrders()} disabled={isOrdersLoading} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d9cbd4] px-3 text-[10px] font-semibold text-[#684768] transition hover:bg-[#f6eef4] disabled:opacity-50">{isOrdersLoading ? <Spinner size={13} /> : <FiRefreshCw size={13} />} Refresh</button>}
                 </div>
 
                 {ordersError && <div role="alert" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#efd5d3] bg-[#fff9f8] px-3 py-2.5 text-xs text-[#9b3935]"><span>{ordersError}</span><button type="button" onClick={() => void refreshOrders()} className="font-semibold">Try again</button></div>}
@@ -791,7 +791,7 @@ export default function Profile({ email }: { email: string }) {
                       </div>
                       <p className="mt-3 border-t border-[#e9dfe8] pt-3 text-[10px] leading-4 text-[#817681]">Prices and availability are refreshed from the catalog. Cart items are not reserved.</p>
                       {cart.items.some((item) => !item.isAvailable) && <p className="mt-3 text-[10px] leading-4 text-[#9b504d]">Resolve unavailable items before checkout.</p>}
-                      <button type="button" disabled={isStartingCartCheckout || cart.items.some((item) => !item.isAvailable)} onClick={() => void checkoutCart()} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#30172f] px-3 text-xs font-semibold text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-55">{isStartingCartCheckout ? <><FiLoader size={14} className="animate-spin" /> Redirecting…</> : "Checkout securely"}</button>
+                      <button type="button" disabled={isStartingCartCheckout || cart.items.some((item) => !item.isAvailable)} onClick={() => void checkoutCart()} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#30172f] px-3 text-xs font-semibold text-white transition hover:bg-[#593153] disabled:cursor-not-allowed disabled:opacity-55">{isStartingCartCheckout ? <><Spinner size={14} /> Redirecting…</> : "Checkout securely"}</button>
                     </aside>
                   </div>
                 ) : (
@@ -866,7 +866,7 @@ export default function Profile({ email }: { email: string }) {
               <div className="mt-6 flex flex-col-reverse justify-end gap-2 border-t border-[#eee7e1] pt-4 sm:flex-row">
                 <button type="button" onClick={() => setIsAddressEditorOpen(false)} className="min-h-11 rounded-lg border border-[#d9cbd4] px-5 text-xs font-semibold text-[#684768] transition hover:bg-[#f8f3f6]">Cancel</button>
                 <button type="submit" disabled={isSavingAddress} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#30172f] px-5 text-xs font-semibold text-white transition hover:bg-[#593153] disabled:cursor-wait disabled:opacity-60">
-                  {isSavingAddress ? <><FiRefreshCw className="animate-spin" size={14} /> Saving…</> : <><FiCheck size={15} /> Save address</>}
+                  {isSavingAddress ? <><Spinner size={14} /> Saving…</> : <><FiCheck size={15} /> Save address</>}
                 </button>
               </div>
             </form>

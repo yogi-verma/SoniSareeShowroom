@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiAlertCircle, FiLoader, FiLogOut, FiX } from "react-icons/fi";
+import { FiAlertCircle, FiLogOut, FiX } from "react-icons/fi";
+import { Spinner } from "../../app/components/ui/Spinner";
 import AdminSidebar from "./adminComponents/sidebar/AdminSidebar";
 import type { AdminSection } from "./adminComponents/sidebar/AdminSidebar";
 import Overview from "./adminComponents/sidebarPages/Overview";
@@ -125,7 +126,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button type="button" onClick={closeLogoutModal} disabled={isLoggingOut} className="admin-button-secondary min-w-24">No, stay</button>
               <button type="button" onClick={handleLogout} disabled={isLoggingOut} className="admin-button-danger min-w-24">
-                {isLoggingOut ? <><FiLoader size={15} className="animate-spin" aria-hidden="true" /> Logging out…</> : <><FiLogOut size={15} aria-hidden="true" /> Yes, log out</>}
+                {isLoggingOut ? <><Spinner size={15} /> Logging out…</> : <><FiLogOut size={15} aria-hidden="true" /> Yes, log out</>}
               </button>
             </div>
           </section>

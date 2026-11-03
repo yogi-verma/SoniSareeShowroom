@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FiAlertCircle, FiBox, FiCheckCircle, FiCreditCard, FiLoader, FiMail, FiPhone, FiRefreshCw, FiTruck, FiX } from "react-icons/fi";
+import { FiAlertCircle, FiBox, FiCheckCircle, FiCreditCard, FiMail, FiPhone, FiRefreshCw, FiTruck, FiX } from "react-icons/fi";
+import { Spinner } from "../../../../app/components/ui/Spinner";
 import { getAdminOrders, markAdminOrderDelivered } from "../../../utils/adminApi";
 import type { AdminOrder, AdminOrdersResponse } from "../../../utils/adminApi";
 import { useAccessibleDialog } from "../useAccessibleDialog";
@@ -98,7 +99,7 @@ export default function Orders() {
           <h1 id="orders-page-title" className="admin-page-title">Customer Orders</h1>
           <p className="admin-page-description">Review paid orders and track delivery.</p>
         </div>
-        <button type="button" onClick={() => void loadOrders()} disabled={isLoading} className="admin-button-secondary"><FiRefreshCw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh</button>
+        <button type="button" onClick={() => void loadOrders()} disabled={isLoading} className="admin-button-secondary">{isLoading ? <Spinner size={14} /> : <FiRefreshCw size={14} />} Refresh</button>
       </div>
 
       {loadError && <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-[#efd5d3] bg-[#fff7f6] px-4 py-3 text-xs text-[#9b3935]"><FiAlertCircle size={15} className="mt-0.5 shrink-0" /><span>{loadError}</span></div>}
@@ -148,7 +149,7 @@ export default function Orders() {
             <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#9a6a24]">DELIVERY CONFIRMATION</p>
             <h2 id="order-detail-title" className="mt-1 pr-8 font-serif text-xl text-[var(--admin-charcoal)]">Confirm successful delivery?</h2>
             <p className="mt-2 text-[13px] leading-5 text-[var(--admin-subtle)]">Are you sure this order was delivered successfully? The customer will see the delivered status in their profile.</p>
-            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setIsConfirmingDelivery(false)} disabled={isMarkingDelivered} className="admin-button-secondary">No</button><button type="button" onClick={() => void confirmDelivery()} disabled={isMarkingDelivered} className="admin-button-primary">{isMarkingDelivered ? <><FiLoader size={14} className="animate-spin" /> Saving…</> : "Yes, delivered"}</button></div>
+            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setIsConfirmingDelivery(false)} disabled={isMarkingDelivered} className="admin-button-secondary">No</button><button type="button" onClick={() => void confirmDelivery()} disabled={isMarkingDelivered} className="admin-button-primary">{isMarkingDelivered ? <><Spinner size={14} /> Saving…</> : "Yes, delivered"}</button></div>
           </>}
         </section>
       </div>}
