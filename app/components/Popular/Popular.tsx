@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { FaArrowRight } from "react-icons/fa";
 import BestSellers from "./BestSellers";
 import banarshiSaree from "../../assets/SareeSection/Banarshi-silk.avif";
@@ -78,9 +79,12 @@ export default function Popular() {
               key={category.name}
               className="flex flex-col items-center text-center"
             >
-              <img
-                src={category.image.src}
+              <Image
+                src={category.image}
                 alt={category.name}
+                width={96}
+                height={96}
+                sizes="(max-width: 767px) 22vw, 96px"
                 className="mb-2 h-[22vw] w-[22vw] rounded-full object-cover transition hover:scale-105 md:h-24 md:w-24"
               />
               <strong className="text-[8px] font-semibold md:text-[9px]">

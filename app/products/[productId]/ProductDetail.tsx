@@ -77,8 +77,14 @@ export default function ProductDetail({ productId }: { productId: string }) {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewFormError, setReviewFormError] = useState("");
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  const [relatedLoading, setRelatedLoading] = useState(false);
+  const [relatedResult, setRelatedResult] = useState<{
+    productId: string;
+    products: Product[];
+  } | null>(null);
+  const relatedProducts =
+    relatedResult?.productId === productId ? relatedResult.products : [];
+  const relatedLoading =
+    Boolean(product) && relatedResult?.productId !== productId;
   const [photoSelection, setPhotoSelection] = useState({ productId, index: 0 });
   const activePhotoIndex =
     photoSelection.productId === productId ? photoSelection.index : 0;
@@ -135,7 +141,6 @@ export default function ProductDetail({ productId }: { productId: string }) {
       category: product.category,
       limit: "8",
     });
-    setRelatedLoading(true);
     fetch(`/api/catalog/products?${params}`, {
       cache: "no-store",
       signal: controller.signal,
@@ -144,17 +149,17 @@ export default function ProductDetail({ productId }: { productId: string }) {
         const result = await response.json().catch(() => ({}));
         if (!response.ok)
           throw new Error(result.message || "Could not load related products.");
-        setRelatedProducts(
-          (result.products ?? [])
+        setRelatedResult({
+          productId,
+          products: (result.products ?? [])
             .filter((item: Product) => item._id !== product._id)
             .slice(0, 4),
-        );
+        });
       })
       .catch(() => {
-        if (!controller.signal.aborted) setRelatedProducts([]);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setRelatedLoading(false);
+        if (!controller.signal.aborted) {
+          setRelatedResult({ productId, products: [] });
+        }
       });
     return () => controller.abort();
   }, [product, productId]);
