@@ -4,6 +4,7 @@ export type ProductReview = {
   id: string;
   userId: string;
   userName: string;
+  userPicture?: string;
   rating: number;
   comment: string;
   createdAt: string;
@@ -22,6 +23,11 @@ export type ProductReviewPage = {
   pagination: { limit: number; skip: number; hasMore: boolean };
 };
 
+export type AllProductReviewsPage = {
+  reviews: ProductReview[];
+  pagination: { limit: number; skip: number; hasMore: boolean };
+};
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const result = await response.json().catch(() => ({})) as T & { message?: string };
   if (!response.ok) throw new Error(result.message || "Could not load product reviews.");
@@ -35,6 +41,16 @@ export async function getProductReviews(productId: string, skip = 0, limit = 20)
     cache: "no-store",
   });
   return parseResponse<ProductReviewPage>(response);
+}
+
+export async function getAllProductReviews(skip = 0, limit = 100, signal?: AbortSignal) {
+  const query = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+  const response = await fetch(`${apiUrl}/api/reviews?${query}`, {
+    credentials: "include",
+    cache: "no-store",
+    signal,
+  });
+  return parseResponse<AllProductReviewsPage>(response);
 }
 
 export async function saveProductReview(productId: string, rating: number, comment: string) {

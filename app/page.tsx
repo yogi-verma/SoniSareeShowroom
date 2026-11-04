@@ -7,6 +7,7 @@ import Footer from "./components/Footer/Footer";
 import Uniqueness from "./components/Uniqueness/Uniqueness";
 import { LuxuryItems } from "./components/LuxuryItems/LuxuryItems";
 import FirstCoupon from "./components/FirstCoupon/FirstCoupon";
+import ShowReviews from "./components/ShowReviews/ShowReviews";
 
 export default function Home() {
   return (
@@ -19,6 +20,7 @@ export default function Home() {
       <Trends />
       <FirstCoupon />
       <Mens />
+      <ShowReviews />
       <Footer />
     </main>
   );

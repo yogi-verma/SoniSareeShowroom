@@ -21,7 +21,7 @@ const collections = [
 
 export default function Mens() {
   return (
-    <section id="menswear" className="mx-auto max-w-6xl px-[5%] pb-8 pt-5 md:px-0">
+    <section id="menswear" className="mx-auto max-w-6xl px-[5%] pb-8 pt-1 md:px-0">
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
           <span className="text-[9px] font-bold tracking-[0.24em] text-[#986d8f]">THE MENSWEAR EDIT</span>
