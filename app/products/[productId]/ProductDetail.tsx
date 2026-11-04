@@ -11,9 +11,10 @@ import {
 } from "react-icons/fi";
 import Header from "../../components/Header/Header";
 import Footer from "../../components/Footer/Footer";
+import CouponCrackers from "../../components/FirstCoupon/CouponCrackers";
 import { useAuth } from "../../components/Auth/AuthProvider";
 import { addCartItem } from "../../lib/cartApi";
-import { openProductCheckout } from "../../lib/paymentApi";
+import { openProductCheckout, validateCoupon } from "../../lib/paymentApi";
 import { useStockRefresh } from "../../lib/useStockRefresh";
 import ProductCard from "../../components/ProductCard";
 import { PurchaseButtons } from "../../components/ui/PurchaseButtons";
@@ -44,6 +45,15 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
+function formatCouponPrice(price: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(price);
+}
+
 export default function ProductDetail({ productId }: { productId: string }) {
   const { user, openSignIn } = useAuth();
   const [productResult, setProductResult] = useState<{
@@ -63,6 +73,13 @@ export default function ProductDetail({ productId }: { productId: string }) {
     action: "cart" | "buy";
   } | null>(null);
   const [notice, setNotice] = useState("");
+  const [couponDraft, setCouponDraft] = useState("");
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponNotice, setCouponNotice] = useState("");
+  const [couponCelebrationId, setCouponCelebrationId] = useState(0);
+  const [isCouponCelebrating, setIsCouponCelebrating] = useState(false);
+  const finishCouponCelebration = useCallback(() => setIsCouponCelebrating(false), []);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [reviewsProductId, setReviewsProductId] = useState("");
   const [reviewSummary, setReviewSummary] =
@@ -276,6 +293,7 @@ export default function ProductDetail({ productId }: { productId: string }) {
             onDismiss: () =>
               setNotice("Checkout was closed. No payment was confirmed."),
           },
+          couponApplied ? "TRY01" : undefined,
         );
       } else {
         const result = await addCartItem(product._id);
@@ -293,6 +311,29 @@ export default function ProductDetail({ productId }: { productId: string }) {
       );
     } finally {
       setPendingAction(null);
+    }
+  }
+
+  async function applyProductCoupon() {
+    if (!product) return;
+    if (!user) {
+      openSignIn();
+      return;
+    }
+    setCouponBusy(true);
+    setCouponNotice("");
+    try {
+      const result = await validateCoupon(couponDraft, product._id);
+      setCouponDraft(result.code);
+      setCouponApplied(true);
+      setCouponNotice(`Lovely choice — ${result.discountPercent}% will be taken off this product at checkout.`);
+      setCouponCelebrationId((current) => current + 1);
+      setIsCouponCelebrating(true);
+    } catch (error) {
+      setCouponApplied(false);
+      setCouponNotice(error instanceof Error ? error.message : "Could not validate this coupon.");
+    } finally {
+      setCouponBusy(false);
     }
   }
 
@@ -344,6 +385,7 @@ export default function ProductDetail({ productId }: { productId: string }) {
 
   return (
     <main className="relative isolate min-h-screen bg-[#faf7f2] text-[#302531]">
+      {isCouponCelebrating && <CouponCrackers key={couponCelebrationId} onComplete={finishCouponCelebration} />}
       <Header />
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[220px] bg-gradient-to-br from-[#40233e] via-[#30172f] to-[#211821]" />
       <section className="relative z-10 mx-auto max-w-7xl px-4 pb-8 pt-30 sm:px-6 lg:px-8">
@@ -559,6 +601,30 @@ export default function ProductDetail({ productId }: { productId: string }) {
                 </dl>
               </div>
 
+              <div className="mb-4 rounded-xl border border-[#e8d9df] bg-white/80 p-3.5 sm:p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-bold tracking-[0.17em] text-[#986d8f]">A LITTLE SOMETHING FOR YOU</p>
+                    <p className="mt-1 font-serif text-base text-[#392c3a]">Enjoy 20% off this piece</p>
+                  </div>
+                  <span className="rounded-full border border-dashed border-[#b89ab1] px-2.5 py-1 font-mono text-[10px] font-bold tracking-[0.13em] text-[#684768]">TRY01</span>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <label htmlFor="product-coupon-code" className="sr-only">Coupon code</label>
+                  <input id="product-coupon-code" value={couponDraft} onChange={(event) => { setCouponDraft(event.target.value.toUpperCase()); setCouponApplied(false); setCouponNotice(""); }} placeholder="Enter coupon code" autoComplete="off" className="min-h-10 min-w-0 flex-1 rounded-lg border border-[#e6dce4] bg-[#fffdfa] px-3 text-xs font-semibold tracking-[0.08em] text-[#463847] outline-none placeholder:font-normal placeholder:tracking-normal focus:border-[#986d8f]" />
+                  <button type="button" disabled={couponBusy || !couponDraft.trim()} onClick={() => void applyProductCoupon()} className="min-h-10 rounded-lg bg-[#684768] px-4 text-[10px] font-semibold text-white transition hover:bg-[#503450] disabled:cursor-not-allowed disabled:opacity-50">{couponBusy ? "Checking…" : couponApplied ? "Applied" : "Apply"}</button>
+                </div>
+                {couponNotice && <p aria-live="polite" className={`mt-2 text-[10px] leading-4 ${couponApplied ? "text-[#526747]" : "text-[#9b504d]"}`}>{couponNotice}</p>}
+                {couponApplied && product && (() => {
+                  const subtotalPaise = Math.round(product.price * 100);
+                  const discountPaise = Math.floor(subtotalPaise * 20 / 100);
+                  return <div className="mt-2 flex items-center justify-between gap-3 rounded-lg bg-[#f8f4f7] px-3 py-2 text-[10px]">
+                    <span className="font-medium text-[#777078]">Your price with TRY01</span>
+                    <span className="flex items-center gap-2"><del className="text-[#a79ba4]">{formatCouponPrice(subtotalPaise / 100)}</del><strong className="text-xs text-[#30172f]">{formatCouponPrice((subtotalPaise - discountPaise) / 100)}</strong></span>
+                  </div>;
+                })()}
+                <p className="mt-2 text-[9px] leading-4 text-[#918792]">One use per email. Applied to this product only.</p>
+              </div>
               <PurchaseButtons
                 size="detail"
                 disabled={product.stock < 1}

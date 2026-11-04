@@ -52,8 +52,15 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
   return result;
 }
 
-export function createPaymentOrder(productId: string, quantity = 1) {
-  return request<PaymentOrder>("/api/users/me/orders", { productId, quantity });
+export function validateCoupon(code: string, productId: string) {
+  return request<{ valid: boolean; code: string; discountPercent: number; productId: string }>(
+    "/api/users/me/coupons/validate",
+    { code, productId },
+  );
+}
+
+export function createPaymentOrder(productId: string, quantity = 1, couponCode?: string) {
+  return request<PaymentOrder>("/api/users/me/orders", { productId, quantity, ...(couponCode ? { couponCode } : {}) });
 }
 
 export function verifyPayment(localOrderId: string, payment: RazorpayPaymentResponse) {
@@ -63,8 +70,8 @@ export function verifyPayment(localOrderId: string, payment: RazorpayPaymentResp
   );
 }
 
-export function createCartPaymentOrder() {
-  return request<PaymentOrder>("/api/users/me/cart/checkout");
+export function createCartPaymentOrder(coupon?: { code: string; productId: string }) {
+  return request<PaymentOrder>("/api/users/me/cart/checkout", coupon ? { couponCode: coupon.code, couponProductId: coupon.productId } : {});
 }
 
 function loadRazorpayCheckout() {
@@ -124,13 +131,15 @@ export function openProductCheckout(
   productId: string,
   customer: CheckoutCustomer,
   callbacks: Parameters<typeof openCheckout>[2],
+  couponCode?: string,
 ) {
-  return openCheckout(createPaymentOrder(productId), customer, callbacks, false);
+  return openCheckout(createPaymentOrder(productId, 1, couponCode), customer, callbacks, false);
 }
 
 export function openCartCheckout(
   customer: CheckoutCustomer,
   callbacks: Parameters<typeof openCheckout>[2],
+  coupon?: { code: string; productId: string },
 ) {
-  return openCheckout(createCartPaymentOrder(), customer, callbacks, true);
+  return openCheckout(createCartPaymentOrder(coupon), customer, callbacks, true);
 }

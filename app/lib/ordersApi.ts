@@ -22,7 +22,12 @@ export type OrderSummary = {
   itemCount: number;
   items: OrderLineItem[];
   unitPrice: number;
+  subtotalAmount: number;
   totalAmount: number;
+  couponCode: string;
+  couponProductId: string;
+  couponProductName: string;
+  couponDiscount: number;
   currency: string;
   paymentStatus: "paid";
   deliveryStatus: "pending" | "delivered";

@@ -85,7 +85,12 @@ export type AdminOrder = {
   customerEmail: string;
   customerPhone: string;
   items: AdminOrderItem[];
+  subtotalAmount: number;
   totalAmount: number;
+  couponCode: string;
+  couponDiscount: number;
+  couponProductId: string;
+  couponProductName: string;
   currency: string;
   paymentMethod: string;
   paymentId: string;

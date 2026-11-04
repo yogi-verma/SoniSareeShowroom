@@ -351,3 +351,52 @@
 @media (min-width: 768px) { .store-product-card--featured { flex-basis: 31%; } }
 @media (min-width: 1024px) { .store-product-card--featured { flex-basis: calc((100% - 3rem) / 4); } }
 @media (min-width: 1280px) { .store-product-card--featured { flex-basis: calc((100% - 4rem) / 5); } }
+@keyframes coupon-cracker-burst {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.15) rotate(0deg);
+  }
+  12% {
+    opacity: 1;
+  }
+  76% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(0.9) rotate(var(--spin));
+  }
+}
+
+.coupon-crackers {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.coupon-crackers__piece {
+  position: absolute;
+  top: var(--origin-y);
+  left: var(--origin-x);
+  width: var(--size);
+  height: calc(var(--size) * 1.65);
+  border-radius: 2px;
+  background: var(--color);
+  opacity: 0;
+  animation: coupon-cracker-burst 3.55s cubic-bezier(0.14, 0.68, 0.34, 1) var(--delay) both;
+  box-shadow: 0 1px 8px color-mix(in srgb, var(--color) 35%, transparent);
+}
+
+.coupon-crackers__piece--round {
+  border-radius: 50%;
+  width: calc(var(--size) * 0.75);
+  height: calc(var(--size) * 0.75);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coupon-crackers {
+    display: none;
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,6 +8,7 @@ import {
   FiArrowRight,
   FiCheck,
   FiCheckCircle,
+  FiChevronDown,
   FiEdit2,
   FiHome,
   FiLogIn,
@@ -26,10 +27,11 @@ import {
   FiX,
 } from "react-icons/fi";
 import Header from "../Header/Header";
+import CouponCrackers from "../FirstCoupon/CouponCrackers";
 import { Spinner } from "../ui/Spinner";
 import { type AuthUser, useAuth } from "../Auth/AuthProvider";
 import { clearCart as clearCartRequest, getCart, removeCartItem as removeCartItemRequest, updateCartItem as updateCartItemRequest, type Cart, type CartItem } from "../../lib/cartApi";
-import { openCartCheckout } from "../../lib/paymentApi";
+import { openCartCheckout, validateCoupon } from "../../lib/paymentApi";
 import { getMyOrder, getMyOrders, type OrderDetail, type OrderSummary } from "../../lib/ordersApi";
 
 type UserAddress = {
@@ -59,6 +61,15 @@ function formatPrice(price: number) {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
+  }).format(price);
+}
+
+function formatCouponPrice(price: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(price);
 }
 
@@ -174,6 +185,16 @@ export default function Profile({ email }: { email: string }) {
   const [isClearCartConfirmationOpen, setIsClearCartConfirmationOpen] = useState(false);
   const [isClearingCart, setIsClearingCart] = useState(false);
   const [isStartingCartCheckout, setIsStartingCartCheckout] = useState(false);
+  const [couponDraft, setCouponDraft] = useState("");
+  const [couponProductId, setCouponProductId] = useState("");
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponPercent, setCouponPercent] = useState(20);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponNotice, setCouponNotice] = useState("");
+  const [couponCelebrationId, setCouponCelebrationId] = useState(0);
+  const [isCouponCelebrating, setIsCouponCelebrating] = useState(false);
+  const [isCouponProductMenuOpen, setIsCouponProductMenuOpen] = useState(false);
+  const couponProductMenuRef = useRef<HTMLDivElement>(null);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
@@ -216,7 +237,20 @@ export default function Profile({ email }: { email: string }) {
     };
   }, [isAuthLoading, isOwnProfile, user?.id]);
 
+  useEffect(() => {
+    if (!couponApplied || !couponProductId || cart.items.some((item) => item.productId === couponProductId)) return;
+    setCouponApplied(false);
+    setCouponProductId("");
+    setCouponDraft("");
+    setCouponNotice("TRY01 was removed because its selected product is no longer in your cart.");
+    setIsCouponCelebrating(false);
+  }, [cart.items, couponApplied, couponProductId]);
+
   const loggedInEmail = user?.email;
+  const appliedCouponItem = couponApplied ? cart.items.find((item) => item.productId === couponProductId) : undefined;
+  const couponSaving = appliedCouponItem ? Math.floor(appliedCouponItem.lineTotal * couponPercent) / 100 : 0;
+  const discountedCartTotal = Math.max(0, cart.subtotal - couponSaving);
+  const finishCouponCelebration = useCallback(() => setIsCouponCelebrating(false), []);
   const refreshOrders = useCallback(async () => {
     if (!loggedInEmail) return;
     setIsOrdersLoading(true);
@@ -284,6 +318,24 @@ export default function Profile({ email }: { email: string }) {
     const timeoutId = window.setTimeout(() => setNotice(""), 3200);
     return () => window.clearTimeout(timeoutId);
   }, [notice]);
+
+  useEffect(() => {
+    if (!isCouponProductMenuOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (event.target instanceof Node && !couponProductMenuRef.current?.contains(event.target)) {
+        setIsCouponProductMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsCouponProductMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isCouponProductMenuOpen]);
 
   useEffect(() => {
     const syncSectionFromHash = () => {
@@ -426,11 +478,37 @@ export default function Profile({ email }: { email: string }) {
         onVerified: (status) => setNotice(status === "paid" ? "Payment successful. Your order is pending and should arrive within 10 days." : "Payment authorized and awaiting confirmation."),
         onFailure: setNotice,
         onDismiss: () => setNotice("Checkout was closed. No payment was confirmed."),
-      });
+      }, couponApplied ? { code: couponDraft.trim().toUpperCase(), productId: couponProductId } : undefined);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not start checkout.");
     } finally {
       setIsStartingCartCheckout(false);
+    }
+  }
+
+  async function applyCartCoupon() {
+    const code = couponDraft.trim().toUpperCase();
+    const targetId = couponProductId || cart.items[0]?.productId;
+    if (!code || !targetId) {
+      setCouponNotice("Enter TRY01 and choose a product in your cart.");
+      return;
+    }
+    setCouponBusy(true);
+    setCouponNotice("");
+    try {
+      const result = await validateCoupon(code, targetId);
+      setCouponProductId(targetId);
+      setCouponDraft(result.code);
+      setCouponPercent(result.discountPercent);
+      setCouponApplied(true);
+      setCouponNotice(`${result.discountPercent}% off ${cart.items.find((item) => item.productId === targetId)?.name || "your selected product"} at checkout.`);
+      setCouponCelebrationId((current) => current + 1);
+      setIsCouponCelebrating(true);
+    } catch (error) {
+      setCouponApplied(false);
+      setCouponNotice(error instanceof Error ? error.message : "Could not validate this coupon.");
+    } finally {
+      setCouponBusy(false);
     }
   }
 
@@ -441,6 +519,13 @@ export default function Profile({ email }: { email: string }) {
     try {
       const result = await removeCartItemRequest(cartItemToRemove.productId);
       setCart(result.cart);
+      if (couponProductId === cartItemToRemove.productId) {
+        setCouponApplied(false);
+        setCouponProductId("");
+        setCouponDraft("");
+        setCouponNotice("TRY01 was removed because its selected product left your cart.");
+        setIsCouponCelebrating(false);
+      }
       setCartItemToRemove(null);
       setNotice("Item removed from your cart.");
     } catch (error) {
@@ -469,6 +554,7 @@ export default function Profile({ email }: { email: string }) {
 
   return (
     <main className="min-h-screen bg-[#faf7f2] text-[#302531]">
+      {isCouponCelebrating && <CouponCrackers key={couponCelebrationId} onComplete={finishCouponCelebration} />}
       <Header />
       <section className="relative overflow-hidden bg-gradient-to-br from-[#40233e] via-[#30172f] to-[#211821] pb-25 pt-25 text-white sm:pb-25 sm:pt-25">
         <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-32 h-[380px] w-[380px] rounded-full border border-white/10" />
@@ -671,11 +757,22 @@ export default function Profile({ email }: { email: string }) {
                                 <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#986d8f]">{item.productType} · {item.category}</p>
                                 <h3 className="mt-1 font-serif text-base leading-5 text-[#302531]"><Link href={`/products/${encodeURIComponent(item.productId)}`} className="rounded-sm transition hover:text-[#684768] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#986d8f]">{item.name}</Link></h3>
                                 <p className="mt-1 text-[10px] text-[#777078]">{formatPrice(item.unitPrice)} each · Qty {item.quantity}</p>
-                                <p className="mt-1 text-xs font-semibold text-[#30172f]">{formatPrice(item.lineTotal)}</p>
+                                {selectedOrder.couponCode && item.productId === selectedOrder.couponProductId ? <>
+                                  <span className="mt-1 inline-flex rounded-full bg-[#edf4ee] px-2 py-0.5 text-[8px] font-semibold text-[#54745f]">{selectedOrder.couponCode} applied</span>
+                                  <p className="mt-1 text-xs"><del className="text-[#9b909a]">{formatCouponPrice(item.lineTotal)}</del><span className="ml-2 font-semibold text-[#30172f]">{formatCouponPrice(item.lineTotal - selectedOrder.couponDiscount)}</span><span className="ml-1 text-[9px] text-[#817681]">after discount</span></p>
+                                </> : <p className="mt-1 text-xs font-semibold text-[#30172f]">{formatPrice(item.lineTotal)}</p>}
                               </div>
                             </div>
                           ))}
-                          <p className="text-right text-sm font-semibold text-[#30172f]">Total paid: {formatPrice(selectedOrder.totalAmount)}</p>
+                          {selectedOrder.couponCode ? <div className="rounded-xl border border-[#dce8dc] bg-[#f5faf4] p-4">
+                            <p className="text-[10px] font-semibold tracking-[0.08em] text-[#426345]">COUPON CODE APPLIED SUCCESSFULLY</p>
+                            <p className="mt-1 text-[11px] text-[#5f6d5e]"><strong>{selectedOrder.couponCode}</strong> applied to <strong>{selectedOrder.couponProductName || selectedOrder.items.find((item) => item.productId === selectedOrder.couponProductId)?.name || "selected product"}</strong></p>
+                            <div className="mt-3 space-y-2 border-t border-[#dce8dc] pt-3 text-[11px]">
+                              <div className="flex justify-between gap-3 text-[#687268]"><span>Original subtotal</span><del>{formatCouponPrice(selectedOrder.subtotalAmount)}</del></div>
+                              <div className="flex justify-between gap-3 font-medium text-[#426345]"><span>You save</span><span>{formatCouponPrice(selectedOrder.couponDiscount)}</span></div>
+                              <div className="flex justify-between gap-3 border-t border-[#dce8dc] pt-2 text-sm font-semibold text-[#263d29]"><span>Total amount after discount</span><span>{formatCouponPrice(selectedOrder.totalAmount)}</span></div>
+                            </div>
+                          </div> : <p className="text-right text-sm font-semibold text-[#30172f]">Total paid: {formatPrice(selectedOrder.totalAmount)}</p>}
                           <p className={`rounded-lg px-3 py-2 text-[10px] leading-4 ${selectedOrder.deliveryStatus === "delivered" ? "bg-[#edf4ee] text-[#54745f]" : "bg-[#fff8ed] text-[#8b642f]"}`}>{selectedOrder.deliveryStatus === "delivered" && selectedOrder.deliveredAt ? `Your payment was received successfully. Delivered on ${new Date(selectedOrder.deliveredAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.` : selectedOrder.deliveryMessage}</p>
                         </div>
                         <dl className="space-y-3 rounded-lg bg-[#faf7f2] p-4 text-[10px]">
@@ -700,6 +797,7 @@ export default function Profile({ email }: { email: string }) {
                           <p className="text-[7px] font-semibold uppercase tracking-[0.12em] text-[#986d8f]">{order.itemCount} {order.itemCount === 1 ? "item" : "items"}</p>
                           <h3 className="mt-0.5 line-clamp-1 font-serif text-sm text-[#302531]">{order.productName}</h3>
                           <p className="mt-1 text-[9px] text-[#817681]">{new Date(order.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} · Qty {order.quantity}</p>
+                          {order.couponCode && <span className="mt-1 inline-flex rounded-full bg-[#edf4ee] px-2 py-0.5 text-[8px] font-semibold text-[#54745f]">{order.couponCode} applied · saved {formatCouponPrice(order.couponDiscount)}</span>}
                           <span className="mt-1 block text-[8px] font-semibold text-[#54745f]">Payment received successfully</span>
                           <span className={`mt-0.5 inline-flex items-center gap-1 text-[8px] font-semibold ${order.deliveryStatus === "delivered" ? "text-[#54745f]" : "text-[#8b642f]"}`}>{order.deliveryStatus === "delivered" ? "Delivery successful" : "Delivery pending"} <FiArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" /></span>
                         </div>
@@ -787,7 +885,49 @@ export default function Profile({ email }: { email: string }) {
                       <p className="text-[9px] font-semibold tracking-[0.18em] text-[#986d8f]">ORDER SUMMARY</p>
                       <div className="mt-4 flex items-center justify-between gap-3 text-xs text-[#716a73]">
                         <span>Subtotal ({cart.totalItems} {cart.totalItems === 1 ? "item" : "items"})</span>
-                        <strong className="text-sm text-[#302531]">{formatPrice(cart.subtotal)}</strong>
+                        <strong className="text-sm text-[#302531]">{couponApplied ? formatCouponPrice(cart.subtotal) : formatPrice(cart.subtotal)}</strong>
+                      </div>
+                      {couponApplied && appliedCouponItem && <div className="mt-3 space-y-2 border-t border-[#e9dfe8] pt-3">
+                        <div className="flex items-start justify-between gap-3 text-[10px] text-[#716a73]">
+                          <span className="leading-4">TRY01 · {appliedCouponItem.name}</span>
+                          <strong className="shrink-0 font-semibold text-[#526747]">−{formatCouponPrice(couponSaving)}</strong>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 text-xs text-[#716a73]">
+                          <span>Total</span>
+                          <span className="flex items-center gap-2"><del className="text-[10px] text-[#a79ba4]">{formatCouponPrice(cart.subtotal)}</del><strong className="text-sm text-[#30172f]">{formatCouponPrice(discountedCartTotal)}</strong></span>
+                        </div>
+                      </div>}
+                      <div className="mt-4 rounded-xl border border-[#e8d9df] bg-white p-3.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[9px] font-bold tracking-[0.16em] text-[#684768]">A LITTLE SOMETHING EXTRA</p>
+                          {couponApplied && <span className="rounded-full bg-[#edf3e9] px-2 py-0.5 text-[9px] font-semibold text-[#526747]">{couponPercent}% applied</span>}
+                        </div>
+                        <label className="mt-3 block text-[10px] font-medium text-[#777078]">Apply to one product</label>
+                        <div ref={couponProductMenuRef} className="relative mt-1.5">
+                          <button type="button" aria-haspopup="listbox" aria-expanded={isCouponProductMenuOpen} aria-controls="cart-coupon-product-options" onClick={() => setIsCouponProductMenuOpen((open) => !open)} className="inline-flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border border-[#dfd3dd] bg-[#fffdfa] px-3 text-left text-[11px] text-[#514852] transition hover:border-[#b99bb5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#986d8f]">
+                            <span className="min-w-0 truncate font-medium">{cart.items.find((item) => item.productId === couponProductId)?.name || cart.items[0]?.name || "Choose a product"}</span>
+                            <FiChevronDown size={14} className={`shrink-0 text-[#80677d] transition-transform ${isCouponProductMenuOpen ? "rotate-180" : ""}`} />
+                          </button>
+                          {isCouponProductMenuOpen && <div id="cart-coupon-product-options" role="listbox" aria-label="Choose which product gets the coupon" className="absolute left-0 top-full z-30 mt-1.5 max-h-56 w-full overflow-y-auto rounded-xl border border-[#eadfd8] bg-white p-1.5 text-[#302531] shadow-[0_16px_36px_rgba(22,13,22,0.16)]">
+                            {cart.items.map((item) => {
+                              const isSelected = (couponProductId || cart.items[0]?.productId) === item.productId;
+                              return <button key={item.productId} type="button" role="option" aria-selected={isSelected} onClick={() => { setCouponProductId(item.productId); setCouponApplied(false); setCouponNotice(""); setIsCouponProductMenuOpen(false); }} className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-[#f6eef4] focus-visible:bg-[#f6eef4] focus-visible:outline-none">
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-[11px] font-medium text-[#463847]">{item.name}</span>
+                                  <span className="mt-0.5 block truncate text-[9px] text-[#918792]">{item.category} · {formatPrice(item.unitPrice)} each</span>
+                                </span>
+                                {isSelected && <FiCheck size={14} className="shrink-0 text-[#684768]" aria-hidden="true" />}
+                              </button>;
+                            })}
+                          </div>}
+                        </div>
+                        <div className="mt-2 flex gap-2">
+                          <label htmlFor="cart-coupon-code" className="sr-only">Coupon code</label>
+                          <input id="cart-coupon-code" value={couponDraft} onChange={(event) => { setCouponDraft(event.target.value.toUpperCase()); setCouponApplied(false); setCouponNotice(""); }} placeholder="Enter TRY01" autoComplete="off" className="min-h-9 min-w-0 flex-1 rounded-lg border border-[#e6dce4] bg-white px-2.5 text-[11px] font-semibold tracking-[0.08em] text-[#463847] outline-none placeholder:font-normal placeholder:tracking-normal focus:border-[#986d8f]" />
+                          <button type="button" disabled={couponBusy || !couponDraft.trim()} onClick={() => void applyCartCoupon()} className="min-h-9 rounded-lg bg-[#684768] px-3 text-[10px] font-semibold text-white transition hover:bg-[#503450] disabled:cursor-not-allowed disabled:opacity-50">{couponBusy ? "Checking…" : couponApplied ? "Recheck" : "Apply"}</button>
+                        </div>
+                        {couponNotice && <p aria-live="polite" className={`mt-2 text-[10px] leading-4 ${couponApplied ? "text-[#526747]" : "text-[#9b504d]"}`}>{couponNotice}</p>}
+                        {couponApplied && (() => { const item = cart.items.find((entry) => entry.productId === couponProductId); return item ? <p className="mt-1 text-[10px] text-[#817681]">Estimated saving: {formatPrice(item.lineTotal * couponPercent / 100)}</p> : null; })()}
                       </div>
                       <p className="mt-3 border-t border-[#e9dfe8] pt-3 text-[10px] leading-4 text-[#817681]">Prices and availability are refreshed from the catalog. Cart items are not reserved.</p>
                       {cart.items.some((item) => !item.isAvailable) && <p className="mt-3 text-[10px] leading-4 text-[#9b504d]">Resolve unavailable items before checkout.</p>}

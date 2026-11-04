@@ -50,12 +50,12 @@ export function LuxuryItems() {
           <p className="text-[9px] font-bold tracking-[0.3em] text-[#a77d45] sm:text-[10px]">
             THE COUTURE COLLECTION
           </p>
-          <h2
+          <h3
             id="luxury-items-heading"
-            className="mt-2 font-serif text-3xl leading-tight text-[#401d3c] sm:text-4xl md:text-5xl"
+            className="mt-1 font-serif text-2xl leading-tight text-[#401d3c] sm:text-3xl md:text-3xl"
           >
             Luxury Items for Luxury Ladies
-          </h2>
+          </h3>
           <div className="mx-auto mt-1 flex max-w-xs items-center gap-3 text-[#b79263]" aria-hidden="true">
             <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[#c8aa7a]" />
             <span className="font-serif text-sm">✦</span>
