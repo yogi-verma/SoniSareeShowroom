@@ -83,12 +83,12 @@ export default function Header() {
 
   return (
     <header className="absolute inset-x-0 top-0 z-50 bg-gradient-to-b from-black/40 via-black/15 to-transparent text-white">
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between px-[5%] py-3.5 md:py-4">
-        <Link href="/" aria-label="Soni Saree Showroom home" className="group flex items-center gap-2.5">
-          <span className="font-serif text-[30px] leading-none text-[#c994bc] transition-colors group-hover:text-[#e4bfd8]">❋</span>
-          <span className="font-serif text-[17px] leading-[1.05] tracking-[0.01em] sm:text-[19px]">
+      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-2 px-3 py-3.5 sm:gap-3 sm:px-[5%] md:py-4">
+        <Link href="/" aria-label="Soni Saree Showroom home" className="group flex min-w-0 items-center gap-1.5 sm:gap-2.5">
+          <span className="shrink-0 font-serif text-[24px] leading-none text-[#c994bc] transition-colors group-hover:text-[#e4bfd8] sm:text-[30px]">❋</span>
+          <span className="min-w-0 font-serif text-[13px] leading-[1.05] tracking-[0.01em] sm:text-[17px] md:text-[19px]">
             Soni Saree Showroom
-            <small className="mt-1.5 block font-sans text-[6px] font-medium tracking-[0.2em] text-[#d8cad5] sm:text-[7px]">
+            <small className="mt-1.5 block truncate font-sans text-[5px] font-medium tracking-[0.14em] text-[#d8cad5] sm:text-[7px] sm:tracking-[0.2em]">
               THE ART OF INDIAN ELEGANCE
             </small>
           </span>
@@ -96,7 +96,7 @@ export default function Header() {
 
         <Navigation />
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-0 sm:gap-2 md:gap-3">
           <SearchBar />
           
 
@@ -111,7 +111,7 @@ export default function Header() {
               }
               router.push(`/me/${encodeURIComponent(user.email)}#cart`);
             }}
-            className="relative grid h-10 w-10 place-items-center rounded-full border border-white/20 text-white/90 transition hover:border-[#c994bc] hover:bg-white/10 hover:text-white"
+            className="relative grid h-9 w-9 place-items-center rounded-full border border-white/20 text-white/90 transition hover:border-[#c994bc] hover:bg-white/10 hover:text-white sm:h-10 sm:w-10"
           >
             <FiShoppingBag aria-hidden="true" size={17} strokeWidth={1.6} />
             {cartItemCount > 0 && <span className="absolute -right-1 -top-1 grid min-h-[17px] min-w-[17px] place-items-center rounded-full bg-[#c994bc] px-1 text-[8px] font-bold leading-none text-[#211821]">{cartItemCount > 99 ? "99+" : cartItemCount}</span>}
@@ -125,7 +125,7 @@ export default function Header() {
               aria-controls="account-menu"
               title="Account"
               onClick={() => setIsProfileMenuOpen((open) => !open)}
-              className="grid h-10 w-10 place-items-center rounded-full border border-white/25 text-white/95 transition hover:border-[#c994bc] hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e8c5dc]"
+              className="grid h-9 w-9 place-items-center rounded-full border border-white/25 text-white/95 transition hover:border-[#c994bc] hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e8c5dc] sm:h-10 sm:w-10"
             >
               {user?.picture ? (
                 // eslint-disable-next-line @next/next/no-img-element

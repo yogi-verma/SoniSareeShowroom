@@ -561,7 +561,7 @@ export default function Profile({ email }: { email: string }) {
       <section className="relative mx-auto -mt-16 max-w-6xl px-4 pb-16 sm:px-8 sm:pb-20">
         {user && isOwnProfile && profile ? (
           <div className="grid items-start gap-5 lg:grid-cols-[290px_minmax(0,1fr)]">
-            <aside className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.11)] sm:p-7 lg:sticky lg:top-24">
+            <aside className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.11)] max-[380px]:p-3 sm:p-7 lg:sticky lg:top-24">
               <div className="flex flex-col items-center text-center">
                 <Avatar user={user} />
                 <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#edf4ee] px-3 py-1 text-[9px] font-semibold tracking-[0.12em] text-[#54745f]">
@@ -607,7 +607,7 @@ export default function Profile({ email }: { email: string }) {
                 </div>
               )}
 
-              {activeSection === "personal" && <section className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
+              {activeSection === "personal" && <section className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] max-[380px]:p-3 sm:p-7">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#eee7e1] pb-5">
                   <div>
                     <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">ACCOUNT INFORMATION</span>
@@ -666,7 +666,7 @@ export default function Profile({ email }: { email: string }) {
                 </div>
               </section>}
 
-              {activeSection === "addresses" && <section className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
+              {activeSection === "addresses" && <section className="rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] max-[380px]:p-3 sm:p-7">
                 <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#eee7e1] pb-5">
                   <div>
                     <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">DELIVERY INFORMATION</span>
@@ -712,7 +712,7 @@ export default function Profile({ email }: { email: string }) {
                 )}
               </section>}
 
-              {activeSection === "orders" && <section id="orders" className="scroll-mt-24 rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
+              {activeSection === "orders" && <section id="orders" className="scroll-mt-24 rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] max-[380px]:p-3 sm:p-7">
                 <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#eee7e1] pb-5">
                   <div>
                     <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">YOUR PURCHASES</span>
@@ -812,7 +812,7 @@ export default function Profile({ email }: { email: string }) {
                 )}
               </section>}
 
-              {activeSection === "cart" && <section id="cart" className="scroll-mt-24 rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] sm:p-7">
+              {activeSection === "cart" && <section id="cart" className="scroll-mt-24 rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 shadow-[0_16px_44px_rgba(43,27,38,0.08)] max-[380px]:p-3 sm:p-7">
                 <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#eee7e1] pb-5">
                   <div>
                     <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">YOUR SELECTION</span>
@@ -970,7 +970,7 @@ export default function Profile({ email }: { email: string }) {
 
       {isAddressEditorOpen && (
         <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-[#211821]/65 px-4 py-6 backdrop-blur-[3px]">
-          <section role="dialog" aria-modal="true" aria-labelledby="address-dialog-title" className="relative my-auto w-full max-w-2xl rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 text-[#302531] shadow-2xl sm:p-7">
+          <section role="dialog" aria-modal="true" aria-labelledby="address-dialog-title" className="relative my-auto w-full max-w-2xl rounded-2xl border border-[#eadfd8] bg-[#fffdfa] p-5 text-[#302531] shadow-2xl max-[380px]:p-3 sm:p-7">
             <button type="button" onClick={() => setIsAddressEditorOpen(false)} aria-label="Close address form" className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-[#756875] transition hover:bg-[#f3edf1]"><FiX size={17} /></button>
             <span className="text-[9px] font-semibold tracking-[0.22em] text-[#986d8f]">DELIVERY DETAILS</span>
             <h2 id="address-dialog-title" className="mt-1 font-serif text-2xl">{editingAddressId ? "Edit address" : "Add a new address"}</h2>

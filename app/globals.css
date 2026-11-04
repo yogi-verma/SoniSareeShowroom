@@ -400,3 +400,13 @@
     display: none;
   }
 }
+
+/* Compact card controls and admin content on 350px phones. */
+@media (max-width: 380px) {
+  .store-product-card__body { padding: 8px; }
+  .store-product-card__name { min-height: 0; font-size: 12px; }
+  .store-purchase-actions { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .store-purchase-button { min-height: 36px; font-size: 9px; }
+  .admin-page { padding-inline: 10px; }
+  .admin-panel-header { padding-inline: 11px; }
+}
